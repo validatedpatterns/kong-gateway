@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.clustering }}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.cp }}
+    server: {{ .Values.spec.destination.server.cp }}
+  project: {{ .Values.spec.project.cp }}
+  source:
+    path: {{ .Values.spec.source.path.clustering }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }} # branch
+  ignoreDifferences:
+    - group: "apps"
+      kind: "Deployment"
+      jsonPointers:
+      - /spec/template/spec/containers/name/proxy/env
+    - group: keycloak.org
+      kind: "KeycloakClient"
+      jsonPointers:
+      - /spec/client/redirectUris
+      - /spec/client/rootUrl
+  syncPolicy:
+    syncOptions:
+    - RespectIgnoreDifferences=true
+    automated: {}

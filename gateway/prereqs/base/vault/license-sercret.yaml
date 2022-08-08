@@ -1,0 +1,11 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name:  kong-enterprise-license 
+  namespace: kong
+  annotations:
+    avp.kubernetes.io/path: "avp/data/test"
+    argocd.argoproj.io/sync-wave: "-1"
+type: Opaque
+stringData:
+  license: <sample>

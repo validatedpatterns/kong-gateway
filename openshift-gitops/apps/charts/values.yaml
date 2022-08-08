@@ -1,0 +1,45 @@
+metadata:
+  namespace: openshift-gitops
+  name:
+    bookinfo: helm-bookinfo
+    operator: operator-install
+    cp: kong
+    postgresql: postgresql
+    cp_prereqs: prereqs
+    cp_postinstall: postinstall
+    cp_vault: cp-vault
+    dp: dp-kong
+    dp_prereqs: dp-prereqs
+    dp_postinstall: dp-postinstall
+    dp_vault: dp-vault
+    clustering: post-deploy
+spec:
+  destination:
+    namespace:
+      bookinfo: bookinfo
+      cp: kong
+      dp: kong
+    server:
+      cp: https://api.cp.kni.syseng.devcluster.openshift.com:6443
+      dp: https://api.dp.kni.syseng.devcluster.openshift.com:6443
+      bookinfo: https://api.dp.kni.syseng.devcluster.openshift.com:6443
+  project:
+    cp: controlplane
+    dp: dataplane
+    bookinfo: dataplane
+  source:
+    path:
+      bookinfo: kong-demo-app
+      operator: gateway/prereqs/operators
+      cp: gateway/controlplane
+      postgresql: gateway/prereqs/overlays/cp/postgresql
+      cp_prereqs: gateway/prereqs/overlays/cp
+      cp_postinstall: gateway/postinstall/cp
+      cp_vault: gateway/prereqs/base/vault
+      dp: gateway/dataplane
+      dp_prereqs: gateway/prereqs/overlays/dp
+      dp_postinstall: gateway/postinstall/dp
+      dp_vault: gateway/prereqs/base/vault
+      clustering: gateway
+    repoURL: https://github.com/hybrid-cloud-patterns/kong-gateway.git
+    targetRevision: kong-pattern

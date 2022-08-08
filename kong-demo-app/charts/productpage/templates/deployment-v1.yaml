@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "productpage.name" . }}-v1
+  labels:
+    {{- include "productpage.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount | default .Values.global.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "productpage.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: 
+        {{- include "productpage.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "productpage.serviceAccountName" . }}
+      containers:
+        - name: productpage
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.image.pullPolicy }}
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            runAsUser: 1000
+      volumes:
+        - name: tmp
+          emptyDir: {}

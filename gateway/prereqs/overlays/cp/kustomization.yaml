@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+patchesJson6902:
+- target:
+    version: v1
+    kind: ServiceAccount
+    name: kong
+  path: patch.yaml
+- target:
+    group: batch
+    version: v1
+    kind: Job
+    name: cert-secret
+  path: patch.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: ClusterRole
+    name: gitops-kong
+  path: patch.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: ClusterRoleBinding
+    name: gitops-kong-binding
+  path: patch.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: Role
+    name: kong-role
+  path: patch.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: RoleBinding
+    name: kong-role-binding
+  path: patch.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: ClusterRole
+    name: gitops-argo
+  path: patch.yaml
+- target:
+    group: rbac.authorization.k8s.io
+    version: v1
+    kind: ClusterRoleBinding
+    name: gitops-argo-binding
+  path: patch.yaml

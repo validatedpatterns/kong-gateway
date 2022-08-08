@@ -1,0 +1,29 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-kong-proxy
+  namespace: kong
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  port:
+    targetPort: kong-proxy
+  to:
+    kind: Service
+    name: dp-kong-kong-proxy
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-kong-proxy-tls
+  namespace: kong
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  port:
+    targetPort: kong-proxy-tls
+  to:
+    kind: Service
+    name: dp-kong-kong-proxy
+  tls:
+    termination: passthrough

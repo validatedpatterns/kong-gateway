@@ -1,0 +1,55 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: kong
+  name: patch-deploy
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: kong
+      volumes:
+      - name: patch-job
+        configMap:
+          name: patch-deploy
+          defaultMode: 0711 
+      containers:
+      - image: cmwylie19/kube-argo-base
+        name: patch-deploy
+        resources: {}
+        volumeMounts:
+        - name: patch-job
+          mountPath: /opt/scripts
+        securityContext:
+           runAsUser: 0
+        command: ["sh","-c","/opt/scripts/patch-job.sh"]
+---
+apiVersion: v1
+data:
+  patch-job.sh: |
+    #!/bin/bash
+    set -eu
+
+    # Get Server
+    SERVER=$(oc get routes -n openshift-gitops redhat-kong-gitops-server -otemplate='{{ .spec.host }}')
+
+    echo $SERVER
+
+    # Get Password
+    PASSWORD=$(oc get secret -n openshift-gitops redhat-kong-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d)
+    echo $PASSWORD
+
+
+    # Login Argo
+    argocd login --username admin --password $PASSWORD $SERVER --insecure
+
+    argocd app patch-resource kong --kind Deployment --resource-name kong-kong --namespace=kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_ADMIN_API_URI\", \"value\": \"$(oc get route -n kong kong-kong-admin -ojsonpath='{.spec.host}')\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
+kind: ConfigMap
+metadata:
+  namespace: kong
+  name: patch-deploy
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"

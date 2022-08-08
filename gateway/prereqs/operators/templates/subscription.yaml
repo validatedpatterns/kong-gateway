@@ -1,0 +1,72 @@
+---
+apiVersion: operators.coreos.com/v1alpha2
+kind: OperatorGroup
+metadata:
+  name: {{.Values.keycloak_operator_group.name}}
+  namespace: {{.Values.keycloak_operator_group.namespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  targetNamespaces:
+    - {{.Values.keycloak_operator_group.targetNamespaces}}
+---
+apiVersion: operators.coreos.com/v1alpha2
+kind: OperatorGroup
+metadata:
+  name: {{.Values.monitoring_operator_group.name}}
+  namespace: {{.Values.monitoring_operator_group.namespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  targetNamespaces:
+    - {{.Values.monitoring_operator_group.targetNamespaces}}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{.Values.keycloak_operator.metadata.name}}
+  namespace: {{.Values.keycloak_operator.metadata.namespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  channel: {{.Values.keycloak_operator.spec.channel}}
+  installPlanApproval: {{.Values.keycloak_operator.spec.installPlanApproval}}
+  name: {{.Values.keycloak_operator.spec.name}}
+  source: {{.Values.keycloak_operator.spec.source}}
+  sourceNamespace: {{.Values.keycloak_operator.spec.sourceNamespace}}
+  startingCSV: {{.Values.keycloak_operator.spec.startingCSV}}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{.Values.grafana_operator.metadata.name}}
+  namespace: {{.Values.grafana_operator.metadata.namespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  channel: {{.Values.grafana_operator.spec.channel}}
+  installPlanApproval: {{.Values.grafana_operator.spec.installPlanApproval}}
+  name:  {{.Values.grafana_operator.spec.name}}
+  source: {{.Values.grafana_operator.spec.source}}
+  sourceNamespace: {{.Values.grafana_operator.spec.sourceNamespace}}
+  startingCSV: {{.Values.grafana_operator.spec.startingCSV}}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{.Values.prometheus_operator.metadata.name}}
+  namespace: {{.Values.prometheus_operator.metadata.namespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  channel: {{.Values.prometheus_operator.spec.channel}}
+  installPlanApproval: {{.Values.prometheus_operator.spec.installPlanApproval}}
+  name: {{.Values.prometheus_operator.spec.name}}
+  source: {{.Values.prometheus_operator.spec.source}}
+  sourceNamespace: {{.Values.prometheus_operator.spec.sourceNamespace}}
+  startingCSV: {{.Values.prometheus_operator.spec.startingCSV}}

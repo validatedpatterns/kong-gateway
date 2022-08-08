@@ -1,0 +1,33 @@
+# Default values for bookinfo.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  image:
+    pullPolicy: IfNotPresent
+    tag: 1.16.4
+  replicaCount: 1
+
+details:
+  image:
+    repository: docker.io/istio/examples-bookinfo-details-v1
+  serviceAccount:
+    name: bookinfo-details
+
+productpage:
+  image:
+    repository: docker.io/istio/examples-bookinfo-productpage-v1
+  serviceAccount:
+    name: bookinfo-productpage
+
+ratings:
+  image:
+    repository: docker.io/istio/examples-bookinfo-ratings-v1
+  serviceAccount:
+    name: bookinfo-ratings
+
+reviews:
+  image:
+    repository: docker.io/istio/examples-bookinfo-reviews
+  serviceAccount:
+    name: bookinfo-reviews

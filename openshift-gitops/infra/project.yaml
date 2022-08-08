@@ -1,0 +1,32 @@
+# minimal configuration
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: dataplane
+  namespace: openshift-gitops
+  annotations:
+    apps: apps.dp.kni.syseng.devcluster.openshift.com
+spec:
+  destinations:
+  - namespace: '*'
+    server: https://api.dp.kni.syseng.devcluster.openshift.com:6443
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  sourceRepos:
+  - https://github.com/hybrid-cloud-patterns/kong-gateway.git
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: controlplane
+  namespace: openshift-gitops
+spec:
+  destinations:
+  - namespace: '*'
+    server: https://api.cp.kni.syseng.devcluster.openshift.com:6443
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  sourceRepos:
+  - https://github.com/hybrid-cloud-patterns/kong-gateway.git

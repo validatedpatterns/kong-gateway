@@ -1,0 +1,13 @@
+global:
+  datacenter: dc1
+  enablePodSecurityPolicies: true
+  openshift:
+    enabled: true
+client:
+  enabled: true
+
+server:
+  replicas: 1
+  bootstrapExpect: 1
+  disruptionBudget:
+    maxUnavailable: 0

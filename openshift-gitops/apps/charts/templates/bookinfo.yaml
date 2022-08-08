@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.bookinfo }}
+  namespace: {{ .Values.metadata.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.bookinfo }}
+    server: {{ .Values.spec.destination.server.bookinfo }}
+  project: {{ .Values.spec.project.bookinfo }}
+  source:
+    path: {{ .Values.spec.source.path.bookinfo }}
+    repoURL: {{ .Values.spec.source.repoURL}}
+    targetRevision: {{ .Values.spec.source.targetRevision }}
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true
+      allowEmpty: true    

@@ -1,0 +1,106 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.dp_prereqs}}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.dp }}
+    server: {{ .Values.spec.destination.server.dp }}
+  project: {{ .Values.spec.project.dp }}
+  source:
+    path: {{ .Values.spec.source.path.dp_prereqs }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }} # branch
+  syncPolicy:
+    automated: {}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.operator}}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    server: {{ .Values.spec.destination.server.dp }}
+  project: {{ .Values.spec.project.dp }}
+  source:
+    path: {{ .Values.spec.source.path.operator }}
+    repoURL:  {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }}
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true
+      allowEmpty: true   
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.dp_vault }}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.dp }}
+    server: {{ .Values.spec.destination.server.dp }}
+  project: {{ .Values.spec.project.dp }}
+  source:
+    path: {{ .Values.spec.source.path.dp_vault }}
+    plugin:
+      name: argocd-vault-plugin
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }} # branch
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.dp }}
+  namespace: {{ .Values.metadata.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.dp }}
+    server: {{ .Values.spec.destination.server.dp }}
+  project: {{ .Values.spec.project.dp }}
+  source:
+    path: {{ .Values.spec.source.path.dp }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }}
+  syncPolicy:
+    automated: {}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.dp_postinstall }}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.dp }}
+    server: {{ .Values.spec.destination.server.dp }}
+  project: {{ .Values.spec.project.dp }}
+  source:
+    directory:
+      recurse: true
+    path: {{ .Values.spec.source.path.dp_postinstall }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }} # branch
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true

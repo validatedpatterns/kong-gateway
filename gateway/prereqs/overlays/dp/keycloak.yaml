@@ -1,0 +1,119 @@
+apiVersion: keycloak.org/v1alpha1
+kind: Keycloak
+metadata:
+  labels:
+    app: kong-demo
+  name: kong-keycloak
+  namespace: keycloak
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  externalAccess:
+    enabled: true
+  instances: 1
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakRealm
+metadata:
+  name: kong-realm
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  namespace: keycloak
+  labels:
+    app: kong-demo
+spec:
+  instanceSelector:
+    matchLabels:
+      app: kong-demo
+  realm:
+    displayName: Kong Realm
+    enabled: true
+    id: kong
+    realm: kong
+    roles:
+      realm:
+        - name: customer
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakUser
+metadata:
+  name: kermit-user
+  namespace: keycloak
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  realmSelector:
+    matchLabels:
+      app: kong-demo
+  user:
+    credentials:
+      - type: password
+        value: kong
+    email: kthefrog@example.com
+    enabled: true
+    firstName: Kermit
+    lastName: The Frog
+    username: kermit
+    realmRoles:
+      - customer
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakUser
+metadata:
+  name: bob-user
+  namespace: keycloak
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  realmSelector:
+    matchLabels:
+      app: kong-demo
+  user:
+    credentials:
+      - type: password
+        value: kong
+    email: bob@example.com
+    enabled: true
+    firstName: Bob
+    username: bob
+---
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: kong-demo-client
+  namespace: keycloak
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  labels:
+    app: kong-demo
+spec:
+  client:
+    enabled: true
+    clientAuthenticatorType: client-secret
+    redirectUris:
+      - 'http://demo-app-kong.$OCP_DOMAIN/*'
+    clientId: kong-demo-client
+    name: kong-demo-client
+    rootUrl: 'http://demo-app-kong.$OCP_DOMAIN/*'
+    implicitFlowEnabled: false
+    secret: client-secret
+    publicClient: false
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: true
+    protocolMappers:
+      - protocol: openid-connect
+        protocolMapper: oidc-usermodel-realm-role-mapper
+        name: realm roles
+        config:
+          access.token.claim: "true"
+          multivalued: "true"
+          jsonType.label: String
+          claim.name: roles
+  realmSelector:
+    matchLabels:
+      app: kong-demo

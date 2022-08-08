@@ -1,0 +1,111 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.cp_prereqs}}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.cp }}
+    server: {{ .Values.spec.destination.server.cp }}
+  project: {{ .Values.spec.project.cp }}
+  source:
+    path: {{ .Values.spec.source.path.cp_prereqs }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }} # branch
+  syncPolicy:
+    automated: {}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.postgresql }}
+  namespace: {{ .Values.metadata.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.cp }}
+    server: {{ .Values.spec.destination.server.cp }}
+  project: {{ .Values.spec.project.cp }}
+  source:
+    path: {{ .Values.spec.source.path.postgresql }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }}
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.cp_vault }}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.cp }}
+    server: {{ .Values.spec.destination.server.cp }}
+  project: {{ .Values.spec.project.cp }}
+  source:
+    path: {{ .Values.spec.source.path.cp_vault }}
+    plugin:
+      name: argocd-vault-plugin
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }} # branch
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.cp }}
+  namespace: {{ .Values.metadata.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.cp }}
+    server: {{ .Values.spec.destination.server.cp }}
+  project: {{ .Values.spec.project.cp }}
+  source:
+    path: {{ .Values.spec.source.path.cp }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }}
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true
+      allowEmpty: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ .Values.metadata.name.cp_postinstall }}
+  namespace: {{ .Values.metadata.namespace }}
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: {{ .Values.spec.destination.namespace.cp }}
+    server: {{ .Values.spec.destination.server.cp }}
+  project: {{ .Values.spec.project.cp }}
+  source:
+    directory:
+      recurse: true
+    path: {{ .Values.spec.source.path.cp_postinstall }}
+    repoURL: {{ .Values.spec.source.repoURL }}
+    targetRevision: {{ .Values.spec.source.targetRevision }} # branch
+  syncPolicy:
+    automated: # automatically sync repo changes
+      prune: true
+      selfHeal: true

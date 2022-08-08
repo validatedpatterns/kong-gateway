@@ -1,0 +1,12 @@
+# This chart will be part of pre-reqs
+---
+apiVersion: v2
+name: kong-postgresql
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+dependencies:
+- name: postgresql
+  version: 11.1.15
+  repository: https://charts.bitnami.com/bitnami
+  condition: postgresql.enabled

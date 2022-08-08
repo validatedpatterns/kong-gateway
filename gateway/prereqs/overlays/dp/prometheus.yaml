@@ -1,0 +1,40 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: kong-prom
+  namespace: kong
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  alerting:
+    alertmanagers:
+    - name: alertmanager-main
+      namespace: kong
+      port: web
+  podMonitorSelector: {}
+  probeSelector: {}
+  replicas: 1
+  ruleSelector: {}
+  serviceAccountName: prometheus-k8s
+  serviceMonitorSelector:
+    matchLabels:
+      app: kong
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: kong
+  name: kong-status
+  namespace: kong
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  endpoints:
+  - interval: 30s
+    port: kong-status
+  selector:
+    matchLabels:
+      kong-metrics: kong-admin

@@ -1,0 +1,45 @@
+keycloak_operator_group:
+  name: kong-operator-group
+  namespace: keycloak
+  targetNamespaces: keycloak
+monitoring_operator_group:
+  name: kong-operator-group
+  namespace: kong
+  targetNamespaces: kong
+keycloak_operator:
+  metadata:
+    name: keycloak-operator
+    namespace: keycloak
+  spec:
+    channel: alpha
+    installPlanApproval: Automatic
+    name: keycloak-operator
+    source: community-operators
+    sourceNamespace: openshift-marketplace
+    startingCSV: keycloak-operator.v19.0.1
+grafana_operator:
+  metadata:
+    name: grafana-operator
+    namespace: kong
+  operator_group:
+    name: kong-operator-group
+    namespace: keycloak
+    targetNamespaces:
+  spec:
+    channel: v4
+    installPlanApproval: Automatic
+    name: grafana-operator
+    source: community-operators
+    sourceNamespace: openshift-marketplace
+    startingCSV: grafana-operator.v4.5.1
+prometheus_operator:
+  metadata:
+    name: prometheus
+    namespace: kong
+  spec:
+    channel: beta
+    installPlanApproval: Automatic
+    name: prometheus
+    source: community-operators
+    sourceNamespace: openshift-marketplace
+    startingCSV: prometheusoperator.0.56.3

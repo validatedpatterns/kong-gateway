@@ -1,0 +1,8 @@
+postgresql:
+  enabled: true
+  serviceAccount:
+    name: kong
+  auth:
+    username: kong
+    database: kong
+    password: kong123

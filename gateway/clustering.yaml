@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: kong
+  name: post-deploy
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: kong
+  name: post-deploy
+  generateName: path-kong-clustering
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    # argocd.argoproj.io/hook-delete-policy: HookSucceeded # commenting out for debugging
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: kong
+      volumes:
+      - name: post-deploy
+        configMap:
+          name: post-deploy
+          defaultMode: 0711 
+      containers:
+      - image: quay.io/mpaulgreen/argo-helper:1.0
+        name: post-deploy
+        resources: {}
+        volumeMounts:
+        - name: post-deploy
+          mountPath: /opt/scripts
+        securityContext:
+           runAsUser: 0
+        command: ["sh","-c","/opt/scripts/post-deploy.sh"]
+---
+apiVersion: v1
+data:
+  post-deploy.sh: |
+    #!/bin/bash
+    set -eu
+
+    # Get Server
+    SERVER=$(oc get routes -n openshift-gitops redhat-kong-gitops-server -otemplate='{{ .spec.host }}')
+
+    echo $SERVER
+
+    # Get Password
+    PASSWORD=$(oc get secret -n openshift-gitops redhat-kong-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d)
+    echo $PASSWORD
+
+
+    # Login Argo
+    argocd login --username admin --password $PASSWORD $SERVER --insecure
+
+    if ! oc get cm cluster-urls -n kong; then
+      echo "config map cluster-urls not found"
+      exit 1
+    fi
+
+    if ! oc get appprojects -n openshift-gitops dataplane; then
+      echo "dataplane project cannot be retrieved"
+      exit 1
+    fi
+
+    # for establishing kong clusters
+    argocd app patch-resource dp-kong --kind Deployment --resource-name dp-kong-kong --namespace=kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_CONTROL_PLANE\", \"value\": \"$(oc get cm cluster-urls -n kong -o jsonpath='{.data.CLUSTER_URL}'):8005\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
+    argocd app patch-resource dp-kong --kind Deployment --resource-name dp-kong-kong --namespace=kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_TELEMETRY_ENDPOINT\", \"value\": \"$(oc get cm cluster-urls -n kong -o jsonpath='{.data.CLUSTER_TELEMETRY_URL}'):8006\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
+
+    # patch rool url and redirect url for keycloak client
+    if ! argocd app patch-resource dp-prereqs --kind KeycloakClient --resource-name kong-demo-client --namespace=keycloak --patch "{\"spec\":{\"client\":{\"rootUrl\": \"http://kong-kong-proxy-kong.$(oc get appprojects -n openshift-gitops dataplane -ojsonpath='{.metadata.annotations.apps}')/\",\"redirectUris\":[\"http://kong-kong-proxy-kong.$(oc get appprojects -n openshift-gitops dataplane -ojsonpath='{.metadata.annotations.apps}')/*\"]}}}" --patch-type 'application/merge-patch+json'; then
+      echo "keycloak client not found"
+      exit 1
+    fi
+
+kind: ConfigMap
+metadata:
+  namespace: kong
+  name: post-deploy
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
