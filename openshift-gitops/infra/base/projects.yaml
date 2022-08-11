@@ -4,8 +4,6 @@ kind: AppProject
 metadata:
   name: dataplane
   namespace: openshift-gitops
-  annotations:
-    apps: dataplane
 spec:
   destinations:
   - namespace: '*'

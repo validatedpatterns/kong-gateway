@@ -8,7 +8,7 @@ metadata:
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
-    server: {{ .Values.spec.destination.server.dp }}
+    name: {{ .Values.spec.destination.server.dp }}
   project: {{ .Values.spec.project.dp }}
   source:
     path: {{ .Values.spec.source.path.dp_prereqs }}
@@ -26,7 +26,8 @@ metadata:
   - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
-    server: {{ .Values.spec.destination.server.dp }}
+    namespace: {{ .Values.spec.destination.namespace.dp }}
+    name: {{ .Values.spec.destination.server.dp }}
   project: {{ .Values.spec.project.dp }}
   source:
     path: {{ .Values.spec.source.path.operator }}
@@ -48,7 +49,7 @@ metadata:
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
-    server: {{ .Values.spec.destination.server.dp }}
+    name: {{ .Values.spec.destination.server.dp }}
   project: {{ .Values.spec.project.dp }}
   source:
     path: {{ .Values.spec.source.path.dp_vault }}
@@ -73,7 +74,7 @@ metadata:
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
-    server: {{ .Values.spec.destination.server.dp }}
+    name: {{ .Values.spec.destination.server.dp }}
   project: {{ .Values.spec.project.dp }}
   source:
     path: {{ .Values.spec.source.path.dp }}
@@ -92,7 +93,7 @@ metadata:
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
-    server: {{ .Values.spec.destination.server.dp }}
+    name: {{ .Values.spec.destination.server.dp }}
   project: {{ .Values.spec.project.dp }}
   source:
     directory:
