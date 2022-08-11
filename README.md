@@ -29,7 +29,7 @@
 #### Install the operator
 
 ```bash
-$ ./scripts/subscriptions.sh provision
+$ ./scripts/infra/argocd.sh provision
 subscription.operators.coreos.com/openshift-gitops-operator created
 sleep 10 seconds until argocd subscription is installed.
 Operator subscription installed successfully
@@ -81,11 +81,11 @@ kustomize build openshift-gitops/infra/overlays | kubectl apply -f -
   - Create a argo app to deploy vault and store the secrets(license-secret)
 Refer [Vault setup](/openshift-gitops/infra/vault/evault.md) for basic dev setup of vault
 
-
 ## Deploy kong
 
 ### Deploy kong and bookinfo app
-```
+
+```bash
 oc apply -f openshift-gitops/app.yaml
 ```
 
@@ -346,7 +346,7 @@ kustomize build openshift-gitops/infra/overlays | kubectl delete -f -
 ### Uninstall ArgoCD
 
 ```bash
-./scripts/subscriptions.sh delete
+./scripts/infra/argocd.sh delete
 ```
 
 - TODO

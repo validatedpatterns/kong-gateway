@@ -3,6 +3,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: dataplane
+  namespace: openshift-gitops
   annotations:
     apps: dataplane
 spec:
@@ -19,8 +20,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: controlplane
-  annotations:
-    apps: controlplane
+  namespace: openshift-gitops
 spec:
   destinations:
   - namespace: '*'

@@ -1,8 +1,8 @@
 #!/bin/sh
 
 
-GITOPS_SUBSCRIPTION='openshift-gitops/operators/gitops-operator.yaml'
-ARGOCD_APP='openshift-gitops/operators/argocd.yaml'
+GITOPS_SUBSCRIPTION='openshift-gitops/argocd/subscription.yaml'
+ARGOCD_APP='openshift-gitops/argocd/argocd.yaml'
 
 function get_subscription_status {
   status=$(kubectl get subscription --ignore-not-found=true -n openshift-operators openshift-gitops-operator --template='{{.status.state}}')
