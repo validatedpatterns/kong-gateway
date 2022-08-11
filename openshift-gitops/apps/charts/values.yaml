@@ -20,9 +20,9 @@ spec:
       cp: kong
       dp: kong
     server:
-      cp: https://api.cp.kni.syseng.devcluster.openshift.com:6443
-      dp: https://api.dp.kni.syseng.devcluster.openshift.com:6443
-      bookinfo: https://api.dp.kni.syseng.devcluster.openshift.com:6443
+      cp: cp
+      dp: dp
+      bookinfo: dp
   project:
     cp: controlplane
     dp: dataplane

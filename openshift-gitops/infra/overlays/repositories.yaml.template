@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: dataplane
+spec:
+  sourceRepos:
+  - https://github.com/other-repo/kong-gateway.git
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: controlplane
+spec:
+  sourceRepos:
+  - https://github.com/other-repo/kong-gateway.git
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps
+spec:
+  source:
+    path: openshift-gitops/apps/charts
+    repoURL: https://github.com/other-repo/kong-gateway.git
+    targetRevision: automation
+    helm:
+      parameters:
+        - name: spec.source.repoURL
+          value: https://github.com/other-repo/kong-gateway.git
+        - name: spec.source.targetRevision
+          value: other-branch  

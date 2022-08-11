@@ -1,13 +1,19 @@
 # Architecture
+
 ## Diagrams
+
 [TODO] - Mriganka
+
 ## Logical Repositories
+
   [Kong - maintained by kong operator](./gateway/)
 
   [Gitops - maintained by gitops operator](./openshift-gitops/)
 
   [Demo Application - Maintained by gitops operator](./kong-demo-app/)
-## Configuration 
+
+## Configuration
+
   [Kong control plane - maintained by kong operator](./gateway/controlplane/values.yaml)
 
   [Kong data plane - maintained by kong operator](./gateway/dataplane/values.yaml)
@@ -16,85 +22,58 @@
 
   [Giptops - maintained by gitops operator](./openshift-gitops/apps/charts/values.yaml)
 
-# Implementation
+## Implementation
 
-## Set up the infra 
-### Install the operator
+### Set up the infra
+
+#### Install the operator
 
 ```bash
-oc apply -f openshift-gitops/infra/gitops-operators.yaml
-```
-### Monitor the operator install
-```bash
-oc get csv -n openshift-gitops -w
-```
-### Delete the default app installed by the operator
-```bash
-oc delete argocd openshift-gitops -n openshift-gitops
-```
-### Deploy a argocd app with vault plugin
-```bash
-oc apply -f openshift-gitops/infra/argocd.yaml
+$ ./scripts/subscriptions.sh provision
+subscription.operators.coreos.com/openshift-gitops-operator created
+sleep 10 seconds until argocd subscription is installed.
+Operator subscription installed successfully
+Deploy ArgoCD app
+serviceaccount/argocd-repo-server created
+argocd.argoproj.io/redhat-kong-gitops created
+sleep 10 seconds until argocd app is Available.
+ArgoCD app deployed successfully
 ```
 
-### Get the route and password of argocd gui
+#### Get the route and password of argocd gui
+
 ```bash
 oc get routes -n openshift-gitops redhat-kong-gitops-server --template='{{ .spec.host }}'
 ```
+
 ```bash
 oc get secret -n openshift-gitops redhat-kong-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d
 ```
 
-### Add controlplane and dataplane cluster
+#### Add controlplane and dataplane clusters
+
 ```bash
-export ARGOCD_SERVER_URL=$(oc get routes -n openshift-gitops | grep redhat-kong-gitops-server | awk '{print $2}')
 oc get secret -n openshift-gitops redhat-kong-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d
-argocd login $ARGOCD_SERVER_URL
-argocd cluster add dp
-argocd cluster add cp
+argocd login `oc get routes -n openshift-gitops redhat-kong-gitops-server --template='{{.spec.host}}'`
+argocd cluster add -y --name dp <dp-context>
+argocd cluster add -y --name cp <cp-context>
 ```
 
-### Create the project for control plane and data plane
-The deployment of kong gateway will be on two unmanaged clusters define the [following fields](./openshift-gitops/infra/project.yaml)
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
-metadata:
-  name: dataplane
-  namespace: openshift-gitops
-  annotations:
-    apps: <<todo>>
-spec:
-  destinations:
-  - namespace: '*'
-    server: <<todo>>>
-  clusterResourceWhitelist:
-  - group: '*'
-    kind: '*'
-  sourceRepos:
-  - <<todo>>
----
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
-metadata:
-  name: controlplane
-  namespace: openshift-gitops
-spec:
-  destinations:
-  - namespace: '*'
-    server: <<todo>>
-  clusterResourceWhitelist:
-  - group: '*'
-    kind: '*'
-  sourceRepos:
-  - <<todo>>
-```
+#### Create the project for control plane and data plane
 
-- [TODO] - Ruben - Automate the above?
+##### Use defaults
 
 ```bash
+kustomize build openshift-gitops/infra/base | kubectl apply -f -
+```
 
-oc apply -f openshift-gitops/infra/project.yaml
+##### Use a custom repository / branch
+
+Copy the `repositories.yaml.template` file in [./openshift-gitops/infra/overlays](./openshift-gitops/infra/overlays) to `repositories.yaml` and edit the values if you need
+to update the repository path or branch where the charts will be installed from.
+
+```bash
+kustomize build openshift-gitops/infra/overlays | kubectl apply -f -
 ```
 
 ### Install the hasicorp vault
@@ -341,8 +320,33 @@ EOF
 ```
 
 Generate metrics data
+
 ```bash
 while [ 1 ]; do curl $KONG_DP_PROXY_URL/bookinfo-ingress/productpage; echo; done
+```
+
+## Clean up
+
+### Uninstall the ArgoCD projects and applications
+
+#### Uninstall using defaults
+
+```bash
+kustomize build openshift-gitops/infra/base | kubectl delete -f -
+```
+
+#### Uninstall using a custom repository / branch
+
+If you used the `repositories.yaml` file, use the overlays instead.
+
+```bash
+kustomize build openshift-gitops/infra/overlays | kubectl delete -f -
+```
+
+### Uninstall ArgoCD
+
+```bash
+./scripts/subscriptions.sh delete
 ```
 
 - TODO

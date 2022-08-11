@@ -9,3 +9,5 @@ cluster-keys.json
 .idea/
 kong.yaml
 secrets/
+# should remain locally
+openshift-gitops/infra/overlays/repositories.yaml
