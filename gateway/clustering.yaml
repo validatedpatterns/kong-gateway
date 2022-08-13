@@ -71,7 +71,7 @@ data:
 
     # patch rool url and redirect url for keycloak client
     DP_DOMAIN=$(argocd cluster get dp -o server)
-    DP_DOMAIN=${DP_DOMAIN/https:\/\/api/app}
+    DP_DOMAIN=${DP_DOMAIN/https:\/\/api/apps}
     DP_DOMAIN=${DP_DOMAIN/:*/}
     if ! argocd app patch-resource dp-prereqs --kind KeycloakClient --resource-name kong-demo-client --namespace=keycloak --patch "{\"spec\":{\"client\":{\"rootUrl\": \"http://kong-kong-proxy-kong.${DP_DOMAIN}/\",\"redirectUris\":[\"http://kong-kong-proxy-kong.${DP_DOMAIN}/*\"]}}}" --patch-type 'application/merge-patch+json'; then
       echo "keycloak client not found"
