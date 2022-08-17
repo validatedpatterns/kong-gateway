@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: dataplane
+  namespace: openshift-gitops
+spec:
+  sourceRepos:
+  - https://github.com/other-repo/kong-gateway.git
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: controlplane
+  namespace: openshift-gitops
+spec:
+  sourceRepos:
+  - https://github.com/other-repo/kong-gateway.git

@@ -10,7 +10,7 @@ metadata:
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.bookinfo }}
-    server: {{ .Values.spec.destination.server.bookinfo }}
+    name: {{ .Values.spec.destination.server.bookinfo }}
   project: {{ .Values.spec.project.bookinfo }}
   source:
     path: {{ .Values.spec.source.path.bookinfo }}

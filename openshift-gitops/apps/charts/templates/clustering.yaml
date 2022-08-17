@@ -8,7 +8,7 @@ metadata:
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.cp }}
-    server: {{ .Values.spec.destination.server.cp }}
+    name: {{ .Values.spec.destination.server.cp }}
   project: {{ .Values.spec.project.cp }}
   source:
     path: {{ .Values.spec.source.path.clustering }}

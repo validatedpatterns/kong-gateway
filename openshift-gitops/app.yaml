@@ -8,7 +8,7 @@ metadata:
 spec:
   destination:
     namespace: openshift-gitops
-    server: https://kubernetes.default.svc
+    name: in-cluster
   project: default
   source:
     path: openshift-gitops/apps/charts
@@ -18,4 +18,4 @@ spec:
     automated: # automatically sync repo changes
       prune: true
       selfHeal: true
-      allowEmpty: true    
+      allowEmpty: true

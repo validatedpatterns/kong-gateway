@@ -70,7 +70,10 @@ data:
     argocd app patch-resource dp-kong --kind Deployment --resource-name dp-kong-kong --namespace=kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_TELEMETRY_ENDPOINT\", \"value\": \"$(oc get cm cluster-urls -n kong -o jsonpath='{.data.CLUSTER_TELEMETRY_URL}'):8006\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
 
     # patch rool url and redirect url for keycloak client
-    if ! argocd app patch-resource dp-prereqs --kind KeycloakClient --resource-name kong-demo-client --namespace=keycloak --patch "{\"spec\":{\"client\":{\"rootUrl\": \"http://kong-kong-proxy-kong.$(oc get appprojects -n openshift-gitops dataplane -ojsonpath='{.metadata.annotations.apps}')/\",\"redirectUris\":[\"http://kong-kong-proxy-kong.$(oc get appprojects -n openshift-gitops dataplane -ojsonpath='{.metadata.annotations.apps}')/*\"]}}}" --patch-type 'application/merge-patch+json'; then
+    DP_DOMAIN=$(argocd cluster get dp -o server)
+    DP_DOMAIN=${DP_DOMAIN/https:\/\/api/apps}
+    DP_DOMAIN=${DP_DOMAIN/:*/}
+    if ! argocd app patch-resource dp-prereqs --kind KeycloakClient --resource-name kong-demo-client --namespace=keycloak --patch "{\"spec\":{\"client\":{\"rootUrl\": \"http://kong-kong-proxy-kong.${DP_DOMAIN}/\",\"redirectUris\":[\"http://kong-kong-proxy-kong.${DP_DOMAIN}/*\"]}}}" --patch-type 'application/merge-patch+json'; then
       echo "keycloak client not found"
       exit 1
     fi
