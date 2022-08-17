@@ -361,7 +361,6 @@ kustomize build openshift-gitops/infra/overlays | kubectl delete -f -
         - [X] Enterprise Vault - Retrieving secrets from the vault
     - Iteration 2
         - [] Automation for Setup, initialize and unsealing of vault.
-        - [] Same name of apps in different projects
-        - [] Automated script for project.yaml
+        - [X] Automated script for project.yaml
         - [] Application Set for vault
         - [] Can you rationlize cp and dp further? 
