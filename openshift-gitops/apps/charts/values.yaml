@@ -42,4 +42,4 @@ spec:
       dp_vault: gateway/prereqs/base/vault
       clustering: gateway
     repoURL: https://github.com/hybrid-cloud-patterns/kong-gateway.git
-    targetRevision: refactor
+    targetRevision: kong-pattern
