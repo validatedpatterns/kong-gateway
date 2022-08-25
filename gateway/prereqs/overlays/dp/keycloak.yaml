@@ -81,7 +81,6 @@ spec:
     firstName: Bob
     username: bob
 ---
----
 apiVersion: keycloak.org/v1alpha1
 kind: KeycloakClient
 metadata:
@@ -89,6 +88,7 @@ metadata:
   namespace: keycloak
   annotations:
     argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
   labels:
     app: kong-demo
 spec:
