@@ -4,8 +4,8 @@ metadata:
   name:  kong-enterprise-license 
   namespace: kong
   annotations:
-    avp.kubernetes.io/path: "avp/data/test"
+    avp.kubernetes.io/path: "secret/data/kubernetes"
     argocd.argoproj.io/sync-wave: "-1"
 type: Opaque
 stringData:
-  license: <sample>
+  license: <license>

@@ -6,6 +6,8 @@ metadata:
 spec:
   sourceRepos:
   - https://github.com/other-repo/kong-gateway.git
+  - https://github.com/hybrid-cloud-patterns/kong-gateway.git
+  - https://helm.releases.hashicorp.com
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -15,3 +17,5 @@ metadata:
 spec:
   sourceRepos:
   - https://github.com/other-repo/kong-gateway.git
+  - https://github.com/hybrid-cloud-patterns/kong-gateway.git
+  - https://helm.releases.hashicorp.com
