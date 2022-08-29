@@ -23,6 +23,10 @@ if [ "$1" = "provision" ]; then
     status=$(get_subscription_status)
   done
   echo Operator subscription installed successfully
+  until [[ $(oc get ns openshift-gitops) ]]; do
+    echo sleep 5 seconds until openshift-gitops namespace is created.
+    sleep 5s
+  done
   echo Deploy ArgoCD app
   kubectl apply --wait -f $ARGOCD_APP
   status=$(get_app_status)

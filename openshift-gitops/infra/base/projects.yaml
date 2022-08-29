@@ -13,6 +13,7 @@ spec:
     kind: '*'
   sourceRepos:
     - https://github.com/hybrid-cloud-patterns/kong-gateway.git
+    - https://helm.releases.hashicorp.com
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -28,3 +29,4 @@ spec:
     kind: '*'
   sourceRepos:
     - https://github.com/hybrid-cloud-patterns/kong-gateway.git
+    - https://helm.releases.hashicorp.com

@@ -42,19 +42,10 @@ data:
     #!/bin/bash
     set -eu
 
-    # Get Server
-    SERVER=$(oc get routes -n openshift-gitops redhat-kong-gitops-server -otemplate='{{ .spec.host }}')
-
-    echo $SERVER
-
-    # Get Password
-    PASSWORD=$(oc get secret -n openshift-gitops redhat-kong-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d)
-    echo $PASSWORD
-
-
     # Login Argo
-    argocd login --username admin --password $PASSWORD $SERVER --insecure
-
+    argocd login --insecure --username admin --password $(oc get secret -n openshift-gitops redhat-kong-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
+       $(oc get routes -n openshift-gitops redhat-kong-gitops-server -otemplate='{{ .spec.host }}')
+       
     if ! oc get cm cluster-urls -n kong; then
       echo "config map cluster-urls not found"
       exit 1

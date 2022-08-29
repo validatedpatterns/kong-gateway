@@ -33,6 +33,8 @@ $ ./scripts/infra/argocd.sh provision
 subscription.operators.coreos.com/openshift-gitops-operator created
 sleep 10 seconds until argocd subscription is installed.
 Operator subscription installed successfully
+Error from server (NotFound): namespaces "openshift-gitops" not found
+sleep 5 seconds until openshift-gitops namespace is created.
 Deploy ArgoCD app
 serviceaccount/argocd-repo-server created
 argocd.argoproj.io/redhat-kong-gitops created
@@ -76,10 +78,156 @@ to update the repository path or branch where the charts will be installed from.
 kustomize build openshift-gitops/infra/overlays | kubectl apply -f -
 ```
 
-### Install the hasicorp vault
-[TODO] - Ruben
-  - Create a argo app to deploy vault and store the secrets(license-secret)
-Refer [Vault setup](/openshift-gitops/infra/vault/evault.md) for basic dev setup of vault
+Now wait until Vault and ArgoCD are properly deployed. Note that the Vault pods will be `Running` but not `Ready`. We need to initialize them.
+
+### Initialize the hasicorp vault
+
+The Vault initialization happens through Ansible Playbooks placed in the [common](./common) folder.
+
+Requirements
+
+* ansible 2.13 or greater
+* jmespath
+
+#### Run the playbook
+
+First make sure that the kong `license.json` file is placed in the base folder.
+
+```bash
+$ cd common
+$ make vault-init
+...
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=15   changed=9    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+
+#### Optional: Vault initialization confirmations
+
+* Check the vault cluster is ready
+
+```bash
+↳ oc get po -n vault
+NAME                                    READY   STATUS    RESTARTS   AGE
+vault-0                                 1/1     Running   0          149m
+vault-1                                 1/1     Running   0          149m
+vault-agent-injector-74c848f67b-tlw7f   1/1     Running   0          149m
+```
+
+* Login to the vault-0 pod (leader)
+
+```bash
+$ oc exec -n vault vault-0 -- vault login $(cat common/pattern-vault.init | jq -r ".root_token")
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                  Value
+---                  -----
+token                hvs.zLLu2mGooaX7bY4dqLadMe4G
+token_accessor       4VkVHfvlXfgIAdCKjnv4aRxn
+token_duration       ∞
+token_renewable      false
+token_policies       ["root"]
+identity_policies    []
+policies             ["root"]
+```
+
+* Check the vault is unsealed
+
+```bash
+$ oc exec -n vault vault-0 -- vault status
+Key                     Value
+---                     -----
+Seal Type               shamir
+Initialized             true
+Sealed                  false
+```
+
+* Confirm followers and the leader are healthy
+
+```bash
+$ oc exec -n vault vault-0 -- vault operator raft list-peers  
+Node                                    Address                        State       Voter
+----                                    -------                        -----       -----
+f923f308-7748-c36a-1ded-1b2d468aad5e    vault-0.vault-internal:8201    leader      true
+fa068454-5e74-c554-daf1-98f62663d373    vault-1.vault-internal:8201    follower    true
+```
+
+* Check the secret with the license exists
+
+```bash
+↳ oc exec -n vault vault-0 -- vault kv get secret/kubernetes
+===== Secret Path =====
+secret/data/kubernetes
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2022-08-23T11:18:08.624777327Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
+
+===== Data =====
+Key        Value
+---        -----
+license    {"license":{"****"}}
+```
+
+* Validate the policy
+
+```bash
+$ oc exec -n vault vault-0 -- vault policy read argocd-repo-server
+path "secret/data/kubernetes/*" { capabilities = ["read"] }
+```
+
+* Validate the auth and the role
+
+```bash
+$ oc exec -n vault vault-0 -- vault auth list
+Path           Type          Accessor                    Description
+----           ----          --------                    -----------
+kubernetes/    kubernetes    auth_kubernetes_ab19d021    n/a
+
+$ oc exec -n vault vault-0 -- vault read auth/kubernetes/role/argocd-repo-server
+Key                                 Value
+---                                 -----
+alias_name_source                   serviceaccount_uid
+bound_service_account_names         [argocd-repo-server]
+bound_service_account_namespaces    [openshift-gitops]
+policies                            [argocd-repo-server default]
+token_bound_cidrs                   []
+token_explicit_max_ttl              0s
+token_max_ttl                       0s
+token_no_default_policy             false
+token_num_uses                      0
+token_period                        0s
+token_policies                      [argocd-repo-server default]
+token_ttl                           15m
+token_type                          default
+ttl                                 15m
+```
+
+* Validate the ArgoCD - Vault integration works
+
+```bash
+$ REPO_SVR_POD=$(oc get po -l app.kubernetes.io/name=redhat-kong-gitops-repo-server -ojson | jq -r '.items[0].metadata.name')
+$ oc cp gateway/prereqs/base/vault/license-sercret.yaml ${REPO_SVR_POD}:secret.yaml
+$ oc exec $REPO_SVR_POD -- argocd-vault-plugin generate secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    avp.kubernetes.io/path: secret/data/kubernetes
+  name: kong-enterprise-license
+  namespace: kong
+stringData:
+  license: '{"license":{...}}'
+type: Opaque
+---
+```
 
 ## Deploy kong
 
@@ -92,6 +240,7 @@ oc apply -f openshift-gitops/app.yaml
 ### Validate deployment
 
 Check the admin endpoint is available
+
 ```bash
 kubectx cp
 http `oc get route -n kong kong-kong-admin --template='{{.spec.host}}'` | jq .version
@@ -360,7 +509,7 @@ kustomize build openshift-gitops/infra/overlays | kubectl delete -f -
         - [X] app of apps
         - [X] Enterprise Vault - Retrieving secrets from the vault
     - Iteration 2
-        - [] Automation for Setup, initialize and unsealing of vault.
+        - [X] Automation for Setup, initialize and unsealing of vault.
         - [X] Automated script for project.yaml
         - [] Application Set for vault
         - [] Can you rationlize cp and dp further? 

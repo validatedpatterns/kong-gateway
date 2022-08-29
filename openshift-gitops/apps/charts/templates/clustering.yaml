@@ -4,7 +4,7 @@ metadata:
   name: {{ .Values.metadata.name.clustering }}
   namespace: {{ .Values.metadata.namespace }}
   finalizers:
-  - resources-finalizer.argocd.argoproj.io
+    - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.cp }}

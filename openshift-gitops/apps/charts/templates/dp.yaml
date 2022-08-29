@@ -4,7 +4,7 @@ metadata:
   name: {{ .Values.metadata.name.dp_prereqs}}
   namespace: {{ .Values.metadata.namespace }}
   finalizers:
-  - resources-finalizer.argocd.argoproj.io
+    - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
@@ -23,7 +23,7 @@ metadata:
   name: {{ .Values.metadata.name.operator}}
   namespace: {{ .Values.metadata.namespace }}
   finalizers:
-  - resources-finalizer.argocd.argoproj.io
+    - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
@@ -37,7 +37,7 @@ spec:
     automated: # automatically sync repo changes
       prune: true
       selfHeal: true
-      allowEmpty: true   
+      allowEmpty: true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -45,7 +45,7 @@ metadata:
   name: {{ .Values.metadata.name.dp_vault }}
   namespace: {{ .Values.metadata.namespace }}
   finalizers:
-  - resources-finalizer.argocd.argoproj.io
+    - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
@@ -70,7 +70,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "5"
   finalizers:
-  - resources-finalizer.argocd.argoproj.io
+    - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
@@ -89,7 +89,7 @@ metadata:
   name: {{ .Values.metadata.name.dp_postinstall }}
   namespace: {{ .Values.metadata.namespace }}
   finalizers:
-  - resources-finalizer.argocd.argoproj.io
+    - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
     namespace: {{ .Values.spec.destination.namespace.dp }}
