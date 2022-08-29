@@ -212,9 +212,9 @@ ttl                                 15m
 * Validate the ArgoCD - Vault integration works
 
 ```bash
-$ REPO_SVR_POD=$(oc get po -l app.kubernetes.io/name=redhat-kong-gitops-repo-server -ojson | jq -r '.items[0].metadata.name')
-$ oc cp gateway/prereqs/base/vault/license-sercret.yaml ${REPO_SVR_POD}:secret.yaml
-$ oc exec $REPO_SVR_POD -- argocd-vault-plugin generate secret.yaml
+$ REPO_SVR_POD=$(oc -n openshift-gitops get po -l app.kubernetes.io/name=redhat-kong-gitops-repo-server -ojson | jq -r '.items[0].metadata.name')
+$ oc -n openshift-gitops cp gateway/prereqs/base/vault/license-sercret.yaml ${REPO_SVR_POD}:secret.yaml
+$ oc -n openshift-gitops exec $REPO_SVR_POD -- argocd-vault-plugin generate secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
