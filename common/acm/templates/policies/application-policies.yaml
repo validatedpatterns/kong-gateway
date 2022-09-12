@@ -1,5 +1,6 @@
 # TODO: Also create a GitOpsCluster.apps.open-cluster-management.io
 {{- range .Values.clusterGroup.managedClusterGroups }}
+{{- $group := . }}
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
@@ -43,6 +44,9 @@ spec:
                       valueFiles:
                       - "/values-global.yaml"
                       - "/values-{{ .name }}.yaml"
+                      {{- range $valueFile := .extraValueFiles }}
+                      - {{ $valueFile | quote }}
+                      {{- end }}
                       parameters:
                       - name: global.repoURL
                         value: $ARGOCD_APP_SOURCE_REPO_URL
@@ -59,6 +63,13 @@ spec:
                      {{- range .helmOverrides }}
                       - name: {{ .name }}
                         value: {{ .value | quote }}
+                     {{- end }}
+                     {{- if .fileParameters }}
+                      fileParameters:
+                      {{- range .fileParameters }}
+                      - name: {{ .name }}
+                        path: {{ .path }}
+                      {{- end }}
                      {{- end }}
                   destination:
                     server: https://kubernetes.default.svc
@@ -100,6 +111,15 @@ spec:
   clusterConditions:
     - status: 'True'
       type: ManagedClusterConditionAvailable
+  {{- if .clusterSelector }}
   clusterSelector: {{ .clusterSelector | toPrettyJson }}
+  {{- else }}
+  clusterSelector:
+    matchLabels:
+    {{- range .labels }}
+      {{ .name }}: {{ .value }}
+    {{- end }}
+      patternGroup: {{ $group.name }}
+  {{- end }}
 ---
 {{- end }}
