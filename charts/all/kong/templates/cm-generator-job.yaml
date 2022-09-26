@@ -1,0 +1,74 @@
+{{ if eq .Values.kong.env.role "control_plane" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cm-generator
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: kong
+      volumes:
+      - name: cm-generator
+        configMap:
+          name: cm-generator
+          defaultMode: 0711 
+      containers:
+      - image: cmwylie19/kube-argo-base
+        name: cm-generator
+        resources: {}
+        volumeMounts:
+        - name: cm-generator
+          mountPath: /opt/scripts
+        securityContext:
+           runAsUser: 0
+        command: ["sh","-c","/opt/scripts/cm-creator.sh"]
+---
+apiVersion: v1
+data:
+  cm-creator.sh: |-
+    #!/bin/bash
+    set -eu
+    # allow LB to establish IP
+    sleep 30
+    CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+    # while CLUSTER_URL is null
+    while [ -z "$CLUSTER_URL"]
+    do
+        # gcp
+        CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+        if [ -z "$CLUSTER_URL" ];
+        then 
+            # aws
+            CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
+        else 
+            echo "CLUSTER_URL Not NULL";
+        fi
+    done
+    CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+    # while CLUSTER_TELEMETRY_URL is null
+    while [ -z "$CLUSTER_TELEMETRY_URL"]
+    do
+        # gcp
+        CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+        if [ -z "$CLUSTER_TELEMETRY_URL" ];
+        then 
+            # aws
+            CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
+        else 
+            echo "CLUSTER_TELEMETRY_URL Not NULL";
+        fi
+    done
+    echo "ClUSTER_URL $CLUSTER_URL"
+    echo "CLUSTER_TELEMETRY_URL $CLUSTER_TELEMETRY_URL"
+    kubectl create cm cluster-urls --from-literal=CLUSTER_URL=$CLUSTER_URL --from-literal=CLUSTER_TELEMETRY_URL=$CLUSTER_TELEMETRY_URL
+kind: ConfigMap
+metadata:
+  name: cm-generator
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+{{ end }}    

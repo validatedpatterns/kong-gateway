@@ -1,0 +1,38 @@
+name: kong-dp
+tags:
+  postgres: false
+kong:
+  ingressController:
+    enabled: false
+  env:
+    database: "off"
+    role: data_plane
+    lua_ssl_trusted_certificate: /etc/secrets/kong-cluster-cert/tls.crt
+    cluster_control_plane: $CLUSTER_URL:8005
+    cluster_telemetry_endpoint: $CLUSTER_TELEMETRY_URL:8006
+  cluster:
+    enabled: false
+  clustertelemetry:
+    enabled: false
+  status:
+    enabled: true
+    http:
+      enabled: true
+      containerPort: 8100
+      parameters: []
+  secretVolumes: 
+    - kong-cluster-cert
+  enterprise:
+    enabled: true
+    license_secret: kong-enterprise-license
+  admin:
+    enabled: false
+  manager:
+    enabled: false
+  portal:
+    enabled: false
+  portalapi:
+    enabled: false  
+  podAnnotations:
+    "kuma.io/mesh": default
+    "kuma.io/gateway": enabled

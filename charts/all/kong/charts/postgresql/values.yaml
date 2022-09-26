@@ -1,0 +1,7 @@
+---
+dbname: kong
+username: kong
+password: kong123
+persistence:
+  type: pvc # pvc or ephemeral
+  size: 1Gi # ignored if type = ephemeral

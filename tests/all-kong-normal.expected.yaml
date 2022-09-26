@@ -1,0 +1,1745 @@
+---
+# Source: kong/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pattern-namespace
+---
+# Source: kong/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kong
+  namespace: pattern-namespace
+---
+# Source: kong/charts/kong/templates/secret-sa-token.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kong-token 
+  namespace: default
+  annotations:
+    kubernetes.io/service-account.name: kong
+type: kubernetes.io/service-account-token
+---
+# Source: kong/charts/postgresql/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgresql
+  namespace: pattern-namespace
+stringData:
+  database-name: kong
+  database-password: kong123
+  database-user: kong
+---
+# Source: kong/templates/license-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kong-enterprise-license
+  namespace: pattern-namespace
+  annotations:
+    avp.kubernetes.io/path: "secret/data/hub/kong"
+type: Opaque
+stringData:
+  license: "<license>"
+---
+# Source: kong/templates/cm-generator-job.yaml
+apiVersion: v1
+data:
+  cm-creator.sh: |-
+    #!/bin/bash
+    set -eu
+    # allow LB to establish IP
+    sleep 30
+    CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+    # while CLUSTER_URL is null
+    while [ -z "$CLUSTER_URL"]
+    do
+        # gcp
+        CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+        if [ -z "$CLUSTER_URL" ];
+        then 
+            # aws
+            CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
+        else 
+            echo "CLUSTER_URL Not NULL";
+        fi
+    done
+    CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+    # while CLUSTER_TELEMETRY_URL is null
+    while [ -z "$CLUSTER_TELEMETRY_URL"]
+    do
+        # gcp
+        CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+        if [ -z "$CLUSTER_TELEMETRY_URL" ];
+        then 
+            # aws
+            CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
+        else 
+            echo "CLUSTER_TELEMETRY_URL Not NULL";
+        fi
+    done
+    echo "ClUSTER_URL $CLUSTER_URL"
+    echo "CLUSTER_TELEMETRY_URL $CLUSTER_TELEMETRY_URL"
+    kubectl create cm cluster-urls --from-literal=CLUSTER_URL=$CLUSTER_URL --from-literal=CLUSTER_TELEMETRY_URL=$CLUSTER_TELEMETRY_URL
+kind: ConfigMap
+metadata:
+  name: cm-generator
+  namespace: pattern-namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+---
+# Source: kong/charts/postgresql/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql
+  namespace: pattern-namespace
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Source: kong/charts/kong/templates/controller-rbac-resources.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+  name: all-kong-kong
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - ingressclassparameterses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongconsumers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongconsumers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongplugins
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongplugins/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - tcpingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - tcpingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - udpingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - udpingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongclusterplugins
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongclusterplugins/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+---
+# Source: kong/charts/kong/templates/controller-rbac-resources.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: all-kong-kong
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: all-kong-kong
+subjects:
+  - kind: ServiceAccount
+    name: kong
+    namespace: default
+---
+# Source: kong/charts/kong/templates/controller-rbac-resources.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: all-kong-kong
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - pods
+      - secrets
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      # Defaults to "<election-id>-<ingress-class>"
+      # Here: "<kong-ingress-controller-leader-nginx>-<nginx>"
+      # This has to be adapted if you change either parameter
+      # when launching the nginx-ingress-controller.
+      - "kong-ingress-controller-leader-kong-kong"
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    verbs:
+      - get
+  # Begin KIC 2.x leader permissions
+  - apiGroups:
+      - ""
+      - coordination.k8s.io
+    resources:
+      - configmaps
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+    verbs:
+      - get
+---
+# Source: kong/templates/roles.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kong-role
+  namespace: pattern-namespace
+rules:
+  - apiGroups:
+      - security.openshift.io
+    resourceNames:
+      - anyuid
+    resources:
+      - securitycontextconstraints
+    verbs:
+      - use
+  - verbs:
+      - create
+      - get
+    apiGroups:
+      - ''
+    resources:
+      - secrets
+      - configmap
+      - services
+  - verbs:
+      - get
+    apiGroups:
+      - route.openshift.io
+    resources:
+      - routes
+---
+# Source: kong/charts/kong/templates/controller-rbac-resources.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: all-kong-kong
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: all-kong-kong
+subjects:
+  - kind: ServiceAccount
+    name: kong
+    namespace: default
+---
+# Source: kong/templates/roles.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kong-role-binding
+  namespace: pattern-namespace
+subjects:
+  - kind: ServiceAccount
+    name: kong
+    namespace: pattern-namespace
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kong-role
+---
+# Source: kong/charts/kong/templates/service-kong-admin.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: all-kong-kong-admin
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+spec:
+  type: ClusterIP
+  ports:
+  - name: kong-admin
+    port: 8001
+    targetPort: 8001
+    appProtocol: http
+    protocol: TCP
+  - name: kong-admin-tls
+    port: 8444
+    targetPort: 8444
+    appProtocol: https
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: "all-kong"
+---
+# Source: kong/charts/kong/templates/service-kong-cluster-telemetry.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: all-kong-kong-clustertelemetry
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+spec:
+  type: LoadBalancer
+  ports:
+  - name: kong-clustertelemetry-tls
+    port: 8006
+    targetPort: 8006
+    appProtocol: https
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: "all-kong"
+---
+# Source: kong/charts/kong/templates/service-kong-cluster.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: all-kong-kong-cluster
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+spec:
+  type: LoadBalancer
+  ports:
+  - name: kong-cluster-tls
+    port: 8005
+    targetPort: 8005
+    appProtocol: https
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: "all-kong"
+---
+# Source: kong/charts/kong/templates/service-kong-manager.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: all-kong-kong-manager
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+spec:
+  type: ClusterIP
+  ports:
+  - name: kong-manager
+    port: 8002
+    targetPort: 8002
+    appProtocol: http
+    protocol: TCP
+  - name: kong-manager-tls
+    port: 8445
+    targetPort: 8445
+    appProtocol: https
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: "all-kong"
+---
+# Source: kong/charts/kong/templates/service-kong-portal-api.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: all-kong-kong-portalapi
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+spec:
+  type: NodePort
+  ports:
+  - name: kong-portalapi
+    port: 8004
+    targetPort: 8004
+    appProtocol: http
+    protocol: TCP
+  - name: kong-portalapi-tls
+    port: 8447
+    targetPort: 8447
+    appProtocol: https
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: "all-kong"
+---
+# Source: kong/charts/kong/templates/service-kong-portal.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: all-kong-kong-portal
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+spec:
+  type: NodePort
+  ports:
+  - name: kong-portal
+    port: 8003
+    targetPort: 8003
+    appProtocol: http
+    protocol: TCP
+  - name: kong-portal-tls
+    port: 8446
+    targetPort: 8446
+    appProtocol: https
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: "all-kong"
+---
+# Source: kong/charts/kong/templates/service-kong-proxy.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: all-kong-kong-proxy
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+    enable-metrics: "true"
+spec:
+  type: ClusterIP
+  ports:
+  - name: kong-proxy
+    port: 80
+    targetPort: 8000
+    appProtocol: http
+    protocol: TCP
+  - name: kong-proxy-tls
+    port: 443
+    targetPort: 8443
+    appProtocol: https
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: "all-kong"
+---
+# Source: kong/charts/postgresql/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: pattern-namespace
+spec:
+  ports:
+  - name: postgresql
+    nodePort: 0
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    name: postgresql
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+# Source: kong/charts/kong/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: all-kong-kong
+  namespace:  default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+    app.kubernetes.io/component: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kong
+      app.kubernetes.io/component: app
+      app.kubernetes.io/instance: "all-kong"
+
+  template:
+    metadata:
+      annotations:
+        kuma.io/service-account-token-volume: kong-token
+        kuma.io/gateway: "enabled"
+        traffic.sidecar.istio.io/includeInboundPorts: ""
+      labels:
+        app.kubernetes.io/name: kong
+        helm.sh/chart: kong-2.13.0
+        app.kubernetes.io/instance: "all-kong"
+        app.kubernetes.io/managed-by: "Helm"
+        app.kubernetes.io/version: "3.0"
+        app.kubernetes.io/component: app
+        app: all-kong-kong
+        version: "3.0"
+    spec:
+      serviceAccountName: kong
+      automountServiceAccountToken: false
+      
+      initContainers:
+      - name: clear-stale-pid
+        image: kong/kong-gateway:3.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+        
+          {}
+        resources:
+          {}
+        command:
+        - "rm"
+        - "-vrf"
+        - "$KONG_PREFIX/pids"
+        env:
+         
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_LISTEN
+          value: "0.0.0.0:8002, 0.0.0.0:8445 http2 ssl"
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001, 0.0.0.0:8444 http2 ssl"
+        - name: KONG_CLUSTER_CERT
+          value: "/etc/secrets/kong-cluster-cert/tls.crt"
+        - name: KONG_CLUSTER_CERT_KEY
+          value: "/etc/secrets/kong-cluster-cert/tls.key"
+        - name: KONG_CLUSTER_LISTEN
+          value: "0.0.0.0:8005 ssl"
+        - name: KONG_CLUSTER_TELEMETRY_LISTEN
+          value: "0.0.0.0:8006 ssl"
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_KIC
+          value: "on"
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+        - name: KONG_LUA_PACKAGE_PATH
+          value: "/opt/?.lua;/opt/?/init.lua;;"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "2"
+        - name: KONG_PG_HOST
+          value: "postgresql"
+        - name: KONG_PG_PASSWORD
+          value: "kong123"
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_PG_USER
+          value: "kong"
+        - name: KONG_PLUGINS
+          value: "bundled"
+        - name: KONG_PORTAL_API_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_API_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORTAL_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
+        - name: KONG_PREFIX
+          value: "/kong_prefix/"
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PROXY_LISTEN
+          value: "0.0.0.0:8000, 0.0.0.0:8443 http2 ssl"
+        - name: KONG_PROXY_STREAM_ACCESS_LOG
+          value: "/dev/stdout basic"
+        - name: KONG_PROXY_STREAM_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ROLE
+          value: "control_plane"
+        - name: KONG_ROUTER_FLAVOR
+          value: "traditional"
+        - name: KONG_SMTP_MOCK
+          value: "on"
+        - name: KONG_STATUS_ACCESS_LOG
+          value: "off"
+        - name: KONG_STATUS_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_STATUS_LISTEN
+          value: "0.0.0.0:8100"
+        - name: KONG_STREAM_LISTEN
+          value: "off"
+        volumeMounts:
+        - name: all-kong-kong-prefix-dir
+          mountPath: /kong_prefix/
+        - name: all-kong-kong-tmp
+          mountPath: /tmp
+        - name:  kong-cluster-cert
+          mountPath: /etc/secrets/kong-cluster-cert
+      - name: wait-for-db
+        image: kong/kong-gateway:3.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+        
+          {}
+        env:
+         
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_LISTEN
+          value: "0.0.0.0:8002, 0.0.0.0:8445 http2 ssl"
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001, 0.0.0.0:8444 http2 ssl"
+        - name: KONG_CLUSTER_CERT
+          value: "/etc/secrets/kong-cluster-cert/tls.crt"
+        - name: KONG_CLUSTER_CERT_KEY
+          value: "/etc/secrets/kong-cluster-cert/tls.key"
+        - name: KONG_CLUSTER_LISTEN
+          value: "0.0.0.0:8005 ssl"
+        - name: KONG_CLUSTER_TELEMETRY_LISTEN
+          value: "0.0.0.0:8006 ssl"
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_KIC
+          value: "on"
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+        - name: KONG_LUA_PACKAGE_PATH
+          value: "/opt/?.lua;/opt/?/init.lua;;"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "2"
+        - name: KONG_PG_HOST
+          value: "postgresql"
+        - name: KONG_PG_PASSWORD
+          value: "kong123"
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_PG_USER
+          value: "kong"
+        - name: KONG_PLUGINS
+          value: "bundled"
+        - name: KONG_PORTAL_API_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_API_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORTAL_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
+        - name: KONG_PREFIX
+          value: "/kong_prefix/"
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PROXY_LISTEN
+          value: "0.0.0.0:8000, 0.0.0.0:8443 http2 ssl"
+        - name: KONG_PROXY_STREAM_ACCESS_LOG
+          value: "/dev/stdout basic"
+        - name: KONG_PROXY_STREAM_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ROLE
+          value: "control_plane"
+        - name: KONG_ROUTER_FLAVOR
+          value: "traditional"
+        - name: KONG_SMTP_MOCK
+          value: "on"
+        - name: KONG_STATUS_ACCESS_LOG
+          value: "off"
+        - name: KONG_STATUS_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_STATUS_LISTEN
+          value: "0.0.0.0:8100"
+        - name: KONG_STREAM_LISTEN
+          value: "off"
+      
+        args: [ "/bin/bash", "-c", "export KONG_NGINX_DAEMON=on KONG_PREFIX=`mktemp -d` KONG_KEYRING_ENABLED=off; until kong start; do echo 'waiting for db'; sleep 1; done; kong stop"]
+        volumeMounts:
+          - name: all-kong-kong-prefix-dir
+            mountPath: /kong_prefix/
+          - name: all-kong-kong-tmp
+            mountPath: /tmp
+          - name:  kong-cluster-cert
+            mountPath: /etc/secrets/kong-cluster-cert
+          
+        resources:
+          {}
+      containers:
+      - name: ingress-controller
+        securityContext:
+      
+          {}
+        args:
+        
+        ports:
+        
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace  
+        
+        
+        - name: CONTROLLER_ELECTION_ID
+          value: "kong-ingress-controller-leader-kong"
+        - name: CONTROLLER_INGRESS_CLASS
+          value: "kong"
+        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
+          value: "true"
+        - name: CONTROLLER_KONG_ADMIN_URL
+          value: "https://localhost:8444"
+        - name: CONTROLLER_PUBLISH_SERVICE
+          value: "default/all-kong-kong-proxy"
+        image: kong/kubernetes-ingress-controller:2.6-redhat
+        imagePullPolicy: IfNotPresent
+      
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          {}
+        volumeMounts:
+        - name: kong-token
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+        
+      
+      - name: "proxy"
+        image: kong/kong-gateway:3.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+        
+          {}
+        env:
+         
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_LISTEN
+          value: "0.0.0.0:8002, 0.0.0.0:8445 http2 ssl"
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001, 0.0.0.0:8444 http2 ssl"
+        - name: KONG_CLUSTER_CERT
+          value: "/etc/secrets/kong-cluster-cert/tls.crt"
+        - name: KONG_CLUSTER_CERT_KEY
+          value: "/etc/secrets/kong-cluster-cert/tls.key"
+        - name: KONG_CLUSTER_LISTEN
+          value: "0.0.0.0:8005 ssl"
+        - name: KONG_CLUSTER_TELEMETRY_LISTEN
+          value: "0.0.0.0:8006 ssl"
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_KIC
+          value: "on"
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+        - name: KONG_LUA_PACKAGE_PATH
+          value: "/opt/?.lua;/opt/?/init.lua;;"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "2"
+        - name: KONG_PG_HOST
+          value: "postgresql"
+        - name: KONG_PG_PASSWORD
+          value: "kong123"
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_PG_USER
+          value: "kong"
+        - name: KONG_PLUGINS
+          value: "bundled"
+        - name: KONG_PORTAL_API_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_API_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORTAL_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
+        - name: KONG_PREFIX
+          value: "/kong_prefix/"
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PROXY_LISTEN
+          value: "0.0.0.0:8000, 0.0.0.0:8443 http2 ssl"
+        - name: KONG_PROXY_STREAM_ACCESS_LOG
+          value: "/dev/stdout basic"
+        - name: KONG_PROXY_STREAM_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ROLE
+          value: "control_plane"
+        - name: KONG_ROUTER_FLAVOR
+          value: "traditional"
+        - name: KONG_SMTP_MOCK
+          value: "on"
+        - name: KONG_STATUS_ACCESS_LOG
+          value: "off"
+        - name: KONG_STATUS_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_STATUS_LISTEN
+          value: "0.0.0.0:8100"
+        - name: KONG_STREAM_LISTEN
+          value: "off"
+        - name: KONG_NGINX_DAEMON
+          value: "off"
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - kong
+              - quit
+              - --wait=15
+        ports:
+        - name: admin
+          containerPort: 8001
+          protocol: TCP
+        - name: admin-tls
+          containerPort: 8444
+          protocol: TCP
+        - name: proxy
+          containerPort: 8000
+          protocol: TCP
+        - name: proxy-tls
+          containerPort: 8443
+          protocol: TCP
+        - name: status
+          containerPort: 8100
+          protocol: TCP
+        - name: cluster-tls
+          containerPort: 8005
+          protocol: TCP
+        - name: manager
+          containerPort: 8002
+          protocol: TCP
+        - name: manager-tls
+          containerPort: 8445
+          protocol: TCP
+        - name: portal
+          containerPort: 8003
+          protocol: TCP
+        - name: portal-tls
+          containerPort: 8446
+          protocol: TCP
+        - name: portalapi
+          containerPort: 8004
+          protocol: TCP
+        - name: portalapi-tls
+          containerPort: 8447
+          protocol: TCP
+        - name: clustert-tls
+          containerPort: 8006
+          protocol: TCP
+        volumeMounts:
+          - name: all-kong-kong-prefix-dir
+            mountPath: /kong_prefix/
+          - name: all-kong-kong-tmp
+            mountPath: /tmp
+          - name:  kong-cluster-cert
+            mountPath: /etc/secrets/kong-cluster-cert
+          
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: status
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: status
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          {} 
+      securityContext:
+        {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: all-kong-kong-prefix-dir
+          emptyDir: 
+            sizeLimit: 256Mi
+        - name: all-kong-kong-tmp
+          emptyDir: 
+            sizeLimit: 1Gi
+        - name: kong-cluster-cert
+          secret:
+            secretName: kong-cluster-cert
+        
+        - name: kong-token
+          secret:
+            secretName: kong-token
+            items:
+            - key: token
+              path: token
+            - key: ca.crt
+              path: ca.crt
+            - key: namespace
+              path: namespace
+---
+# Source: kong/charts/kong/templates/migrations.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: all-kong-kong-init-migrations
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+    app.kubernetes.io/component: init-migrations
+  annotations:
+spec:
+  backoffLimit: 
+  template:
+    metadata:
+      name: kong-init-migrations
+      labels:
+        app.kubernetes.io/name: kong
+        helm.sh/chart: kong-2.13.0
+        app.kubernetes.io/instance: "all-kong"
+        app.kubernetes.io/managed-by: "Helm"
+        app.kubernetes.io/version: "3.0"
+        app.kubernetes.io/component: init-migrations
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: kong
+      automountServiceAccountToken: true
+      containers:
+      - name: kong-migrations
+        image: kong/kong-gateway:3.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+        
+          {} 
+        env:
+         
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_LISTEN
+          value: "0.0.0.0:8002, 0.0.0.0:8445 http2 ssl"
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001, 0.0.0.0:8444 http2 ssl"
+        - name: KONG_CLUSTER_CERT
+          value: "/etc/secrets/kong-cluster-cert/tls.crt"
+        - name: KONG_CLUSTER_CERT_KEY
+          value: "/etc/secrets/kong-cluster-cert/tls.key"
+        - name: KONG_CLUSTER_LISTEN
+          value: "0.0.0.0:8005 ssl"
+        - name: KONG_CLUSTER_TELEMETRY_LISTEN
+          value: "0.0.0.0:8006 ssl"
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_KIC
+          value: "on"
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+        - name: KONG_LUA_PACKAGE_PATH
+          value: "/opt/?.lua;/opt/?/init.lua;;"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "2"
+        - name: KONG_PG_HOST
+          value: "postgresql"
+        - name: KONG_PG_PASSWORD
+          value: "kong123"
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_PG_USER
+          value: "kong"
+        - name: KONG_PLUGINS
+          value: "bundled"
+        - name: KONG_PORTAL_API_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_API_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORTAL_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
+        - name: KONG_PREFIX
+          value: "/kong_prefix/"
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PROXY_LISTEN
+          value: "0.0.0.0:8000, 0.0.0.0:8443 http2 ssl"
+        - name: KONG_PROXY_STREAM_ACCESS_LOG
+          value: "/dev/stdout basic"
+        - name: KONG_PROXY_STREAM_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ROLE
+          value: "control_plane"
+        - name: KONG_ROUTER_FLAVOR
+          value: "traditional"
+        - name: KONG_SMTP_MOCK
+          value: "on"
+        - name: KONG_STATUS_ACCESS_LOG
+          value: "off"
+        - name: KONG_STATUS_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_STATUS_LISTEN
+          value: "0.0.0.0:8100"
+        - name: KONG_STREAM_LISTEN
+          value: "off"
+        - name: KONG_NGINX_DAEMON
+          value: "off"
+        args: [ "kong", "migrations", "bootstrap" ]
+        volumeMounts:
+        - name: all-kong-kong-prefix-dir
+          mountPath: /kong_prefix/
+        - name: all-kong-kong-tmp
+          mountPath: /tmp
+        - name:  kong-cluster-cert
+          mountPath: /etc/secrets/kong-cluster-cert
+        
+        resources:
+          {}
+      securityContext:
+        {}
+      restartPolicy: OnFailure
+      volumes:
+      - name: all-kong-kong-prefix-dir
+        emptyDir: 
+          sizeLimit: 256Mi
+      - name: all-kong-kong-tmp
+        emptyDir: 
+          sizeLimit: 1Gi
+      - name: kong-cluster-cert
+        secret:
+          secretName: kong-cluster-cert
+---
+# Source: kong/templates/cert-secret-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cert-secret
+  namespace: pattern-namespace
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      serviceAccountName: kong
+      containers:
+      - name: generate-cert-secret
+        image: quay.io/mpaulgreen/cert-generator:1.0
+        securityContext:
+          runAsUser: 0
+        command:
+         - "/bin/bash"
+         - "-c"
+         - "oc create secret tls kong-cluster-cert --cert=./cluster.crt --key=./cluster.key -n kong && echo 'kong certificate secret created'"
+      restartPolicy: Never
+---
+# Source: kong/templates/cm-generator-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cm-generator
+  namespace: pattern-namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: kong
+      volumes:
+      - name: cm-generator
+        configMap:
+          name: cm-generator
+          defaultMode: 0711 
+      containers:
+      - image: cmwylie19/kube-argo-base
+        name: cm-generator
+        resources: {}
+        volumeMounts:
+        - name: cm-generator
+          mountPath: /opt/scripts
+        securityContext:
+           runAsUser: 0
+        command: ["sh","-c","/opt/scripts/cm-creator.sh"]
+---
+# Source: kong/templates/roles.yaml
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRole
+# metadata:
+#   name: gitops-kong
+# rules:
+#   - apiGroups:
+#       - networking.k8s.io
+#     resources:
+#       - ingressclasses
+#     verbs:
+#       - create
+#       - patch
+#   - apiGroups:
+#       - apiextensions.k8s.io
+#     resources:
+#       - customresourcedefinitions
+#     verbs:
+#       - patch
+#       - create
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: gitops-kong-binding
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: ClusterRole
+#   name: gitops-kong
+# subjects:
+#   - kind: ServiceAccount
+#     name: redhat-kong-gitops-argocd-application-controller
+#     namespace: openshift-gitops
+---
+# Source: kong/charts/postgresql/templates/deployment-config.yaml
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: postgresql
+  namespace: pattern-namespace
+spec:
+  replicas: 1
+  selector:
+    name: postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        name: postgresql
+    spec:
+      containers:
+      - env:
+        - name: POSTGRESQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: database-user
+              name: postgresql
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: postgresql
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              key: database-name
+              name: postgresql
+        image: ' '
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - /usr/libexec/check-container
+            - --live
+          failureThreshold: 3
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: postgresql
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - /usr/libexec/check-container
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: 512Mi
+        securityContext:
+          capabilities: {}
+          privileged: false
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/pgsql/data
+          name: postgresql-data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+      - name: postgresql-data
+        
+        persistentVolumeClaim:
+          claimName: postgresql
+        
+  triggers:
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - postgresql
+      from:
+        kind: ImageStreamTag
+        name: postgresql:10-el8
+        namespace: openshift
+      lastTriggeredImage: ""
+    type: ImageChange
+  - type: ConfigChange
+---
+# Source: kong/templates/routes.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-admin
+  namespace: pattern-namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-admin
+  to:
+    kind: Service
+    name: kong-cp-kong-admin
+---
+# Source: kong/templates/routes.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-manager
+  namespace: pattern-namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-manager
+  to:
+    kind: Service
+    name: kong-cp-kong-manager
+---
+# Source: kong/templates/routes.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-manager-tls
+  namespace: pattern-namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-manager-tls
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: kong-cp-kong-manager
+---
+# Source: kong/templates/routes.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-admin-tls
+  namespace: pattern-namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-admin-tls
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: kong-cp-kong-admin
+---
+# Source: kong/charts/kong/templates/migrations-post-upgrade.yaml
+# Why is this Job duplicated and not using only helm hooks?
+# See: https://github.com/helm/charts/pull/7362
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: all-kong-kong-post-upgrade-migrations
+  namespace: default
+  labels:
+    app.kubernetes.io/name: kong
+    helm.sh/chart: kong-2.13.0
+    app.kubernetes.io/instance: "all-kong"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.0"
+    app.kubernetes.io/component: post-upgrade-migrations
+  annotations:
+    helm.sh/hook: "post-upgrade"
+    helm.sh/hook-delete-policy: "before-hook-creation"
+spec:
+  backoffLimit: 
+  template:
+    metadata:
+      name: kong-post-upgrade-migrations
+      labels:
+        app.kubernetes.io/name: kong
+        helm.sh/chart: kong-2.13.0
+        app.kubernetes.io/instance: "all-kong"
+        app.kubernetes.io/managed-by: "Helm"
+        app.kubernetes.io/version: "3.0"
+        app.kubernetes.io/component: post-upgrade-migrations
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: kong
+      automountServiceAccountToken: true
+      containers:
+      - name: kong-post-upgrade-migrations
+        image: kong/kong-gateway:3.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+        
+          {} 
+        env:
+         
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ADMIN_GUI_LISTEN
+          value: "0.0.0.0:8002, 0.0.0.0:8445 http2 ssl"
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001, 0.0.0.0:8444 http2 ssl"
+        - name: KONG_CLUSTER_CERT
+          value: "/etc/secrets/kong-cluster-cert/tls.crt"
+        - name: KONG_CLUSTER_CERT_KEY
+          value: "/etc/secrets/kong-cluster-cert/tls.key"
+        - name: KONG_CLUSTER_LISTEN
+          value: "0.0.0.0:8005 ssl"
+        - name: KONG_CLUSTER_TELEMETRY_LISTEN
+          value: "0.0.0.0:8006 ssl"
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_KIC
+          value: "on"
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              name: kong-enterprise-license
+              key: license
+        - name: KONG_LUA_PACKAGE_PATH
+          value: "/opt/?.lua;/opt/?/init.lua;;"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "2"
+        - name: KONG_PG_HOST
+          value: "postgresql"
+        - name: KONG_PG_PASSWORD
+          value: "kong123"
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_PG_USER
+          value: "kong"
+        - name: KONG_PLUGINS
+          value: "bundled"
+        - name: KONG_PORTAL_API_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_API_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORTAL_GUI_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PORTAL_GUI_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
+        - name: KONG_PREFIX
+          value: "/kong_prefix/"
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PROXY_LISTEN
+          value: "0.0.0.0:8000, 0.0.0.0:8443 http2 ssl"
+        - name: KONG_PROXY_STREAM_ACCESS_LOG
+          value: "/dev/stdout basic"
+        - name: KONG_PROXY_STREAM_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_ROLE
+          value: "control_plane"
+        - name: KONG_ROUTER_FLAVOR
+          value: "traditional"
+        - name: KONG_SMTP_MOCK
+          value: "on"
+        - name: KONG_STATUS_ACCESS_LOG
+          value: "off"
+        - name: KONG_STATUS_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_STATUS_LISTEN
+          value: "0.0.0.0:8100"
+        - name: KONG_STREAM_LISTEN
+          value: "off"
+        - name: KONG_NGINX_DAEMON
+          value: "off"
+        args: [ "kong", "migrations", "finish" ]
+        volumeMounts:
+        - name: all-kong-kong-prefix-dir
+          mountPath: /kong_prefix/
+        - name: all-kong-kong-tmp
+          mountPath: /tmp
+        - name:  kong-cluster-cert
+          mountPath: /etc/secrets/kong-cluster-cert
+        
+        resources:
+          {}
+      securityContext:
+        {}
+      restartPolicy: OnFailure
+      volumes:
+      - name: all-kong-kong-prefix-dir
+        emptyDir: 
+          sizeLimit: 256Mi
+      - name: all-kong-kong-tmp
+        emptyDir: 
+          sizeLimit: 1Gi
+      - name: kong-cluster-cert
+        secret:
+          secretName: kong-cluster-cert

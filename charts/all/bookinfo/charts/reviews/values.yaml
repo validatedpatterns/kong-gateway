@@ -1,0 +1,9 @@
+replicaCount: 1
+
+image:
+  repository: docker.io/istio/examples-bookinfo-reviews
+  tag: 1.16.4
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  name: bookinfo-reviews

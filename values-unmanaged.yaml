@@ -1,0 +1,210 @@
+clusterGroup:
+  name: unmanaged
+  isHubCluster: true
+  # Note: setting this to true stores the vault unseal keys inside a cluster secret and
+  # is fundamentally insecure
+  insecureUnsealVaultInsideCluster: false
+
+  namespaces:
+  - vault
+  - golang-external-secrets
+  - kong-clustering
+
+  projects:
+    - hub
+    - controlplane
+    - dataplane
+
+  externalClusters:
+    - controlplane
+    - dataplane
+
+  applications:
+
+    vault:
+      name: vault
+      namespace: vault
+      project: hub
+      chart: vault
+      repoURL: https://helm.releases.hashicorp.com
+      targetRevision: v0.20.1
+      overrides:
+      - name: global.openshift
+        value: "true"
+      - name: injector.enabled
+        value: "false"
+      - name: ui.enabled
+        value: "true"
+      - name: ui.serviceType
+        value: LoadBalancer
+      - name: server.route.enabled
+        value: "true"
+      - name: server.route.host
+        value: null
+      - name: server.route.tls.termination
+        value: edge
+      - name: server.image.repository
+        value: "registry.connect.redhat.com/hashicorp/vault"
+      - name: server.image.tag
+        value: "1.10.3-ubi"
+      - name: server.ha.enabled
+        value: true
+      - name: server.ha.replicas
+        value: 2
+      - name: server.ha.raft.enabled
+        value: true
+      - name: server.ha.raft.tls
+        value: false
+
+    golang-external-secrets:
+      name: golang-external-secrets
+      namespace: golang-external-secrets
+      project: hub
+      path: common/golang-external-secrets
+
+    kong-cp:
+      name: kong-cp
+      namespace: kong
+      project: controlplane
+      path: charts/all/kong
+      clusterName: controlplane
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          selfHeal: true
+      ignoreDifferences:
+        - group: "apps"
+          kind: "Deployment"
+          jqPathExpressions:
+          - .spec.template.spec.containers[] | select(.name == "proxy").env[] | select(.name == "KONG_ADMIN_API_URI")
+        - group: keycloak.org
+          kind: "KeycloakClient"
+          jsonPointers:
+          - /spec/client/redirectUris
+          - /spec/client/rootUrl
+        - group: "apps.openshift.io"
+          kind: "DeploymentConfig"
+          name: "postgresql"
+          jqPathExpressions:
+          - .spec.template.spec.containers[] | select(.name == "postgresql").image
+          - .spec.triggers[].imageChangeParams.lastTriggeredImage
+    kong-dp:
+      name: kong-dp
+      namespace: kong
+      project: dataplane
+      path: charts/all/kong
+      clusterName: dataplane
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          selfHeal: true
+      extraValueFiles:
+       - /values-kong-dp.yaml
+      ignoreDifferences:
+        - group: "apps"
+          kind: "Deployment"
+          jsonPointers:
+          - .spec.template.spec.containers[] | select(.name == "proxy").env[] | select(.name == "KONG_CLUSTER_CONTROL_PLANE" or .name == "KONG_CLUSTER_TELEMETRY_ENDPOINT")
+        - group: keycloak.org
+          kind: "KeycloakClient"
+          jsonPointers:
+          - /spec/client/redirectUris
+          - /spec/client/rootUrl
+
+    bookinfo:
+      name: bookinfo
+      namespace: bookinfo
+      project: dataplane
+      path: charts/all/bookinfo
+      clusterName: dataplane
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          selfHeal: true
+    
+    kong-clustering:
+      name: kong-clustering
+      namespace: kong-clustering
+      project: hub
+      path: charts/all/clustering
+      syncPolicy:
+        automated:
+          selfHeal: true
+
+  imperative:
+    # NOTE: We *must* use lists and not hashes. As hashes lose ordering once parsed by helm
+    # The default schedule is every 10 minutes: imperative.schedule
+    # Total timeout of all jobs is 1h: imperative.activeDeadlineSeconds
+    # imagePullPolicy is set to always: imperative.imagePullPolicy
+    # For additional overrides that apply to the jobs, please refer to
+    # https://hybrid-cloud-patterns.io/imperative-actions/#additional-job-customizations
+    jobs:
+    - name: regional-ca
+      # ansible playbook to be run
+      playbook: ansible/playbooks/on-hub-get-regional-ca.yml
+      # per playbook timeout in seconds
+      timeout: 234
+      # verbosity: "-v"
+
+  managedClusterGroups:
+    # region-one:
+    #   name: region-one
+    #   helmOverrides:
+    #   - name: clusterGroup.isHubCluster
+    #     value: false
+    #   clusterSelector:
+    #     matchLabels:
+    #       clusterGroup: region-one
+
+#  To have apps in multiple flavors, use namespaces and use helm overrides as appropriate
+#
+#    pipelines:
+#      name: pipelines
+#      namespace: production
+#      project: datacenter
+#      path: applications/pipeline
+#      repoURL: https://github.com/you/applications.git
+#      targetRevision: stable
+#      overrides:
+#      - name: myparam
+#        value: myparam
+#
+#    pipelines_staging:
+#    - name: pipelines
+#      namespace: staging
+#      project: datacenter
+#      path: applications/pipeline
+#      repoURL: https://github.com/you/applications.git
+#      targetRevision: main
+#
+#   Additional applications
+#   Be sure to include additional resources your apps will require
+#   +X machines
+#   +Y RAM
+#   +Z CPU
+#    vendor-app:
+#      name: vendor-app
+#      namespace: default
+#      project: vendor
+#      path: path/to/myapp
+#      repoURL: https://github.com/vendor/applications.git
+#      targetRevision: main
+
+#  managedSites:
+#    factory:
+#      name: factory
+#      # repoURL: https://github.com/dagger-refuse-cool/manuela-factory.git
+#      targetRevision: main
+#      path: applications/factory
+#      helmOverrides:
+#      - name: site.isHubCluster
+#        value: false
+#      clusterSelector:
+#        matchExpressions:
+#        - key: vendor
+#          operator: In
+#          values:
+#            - OpenShift

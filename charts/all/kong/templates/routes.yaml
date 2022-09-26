@@ -1,0 +1,92 @@
+{{ if eq .Values.kong.env.role "data_plane" }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-dp-kong-proxy
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  port:
+    targetPort: kong-proxy
+  to:
+    kind: Service
+    name: kong-dp-kong-proxy
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-dp-kong-proxy-tls
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  port:
+    targetPort: kong-proxy-tls
+  to:
+    kind: Service
+    name: kong-dp-kong-proxy
+  tls:
+    termination: passthrough
+{{ else if eq .Values.kong.env.role "control_plane" }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-admin
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-admin
+  to:
+    kind: Service
+    name: kong-cp-kong-admin
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-manager
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-manager
+  to:
+    kind: Service
+    name: kong-cp-kong-manager
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-manager-tls
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-manager-tls
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: kong-cp-kong-manager
+---    
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kong-cp-kong-admin-tls
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  port:
+    targetPort: kong-admin-tls
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: kong-cp-kong-admin
+{{ end }}

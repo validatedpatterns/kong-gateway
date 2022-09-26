@@ -1,0 +1,13 @@
+# Default values for details.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: docker.io/istio/examples-bookinfo-ratings-v1
+  tag: 1.16.4
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  name: bookinfo-ratings

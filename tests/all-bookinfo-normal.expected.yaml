@@ -1,0 +1,389 @@
+---
+# Source: bookinfo/templates/ns.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pattern-namespace
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+---
+# Source: bookinfo/charts/details/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookinfo-details
+  namespace: pattern-namespace
+  labels:
+    account: details
+---
+# Source: bookinfo/charts/productpage/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookinfo-productpage
+  namespace: pattern-namespace
+  labels:
+    account: productpage
+---
+# Source: bookinfo/charts/ratings/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookinfo-ratings
+  namespace: pattern-namespace
+  labels:
+    account: ratings
+---
+# Source: bookinfo/charts/reviews/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookinfo-reviews
+  namespace: pattern-namespace
+  labels:
+    account: reviews
+---
+# Source: bookinfo/templates/clusterrole.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: 'bookinfo-scc-usage'
+rules:
+  - verbs:
+      - use
+    apiGroups:
+      - security.openshift.io
+    resources:
+      - securitycontextconstraints
+    resourceNames:
+      - anyuid
+---
+# Source: bookinfo/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: bookinfo
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: "system:serviceaccounts:default"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: bookinfo-scc-usage
+---
+# Source: bookinfo/charts/details/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: details
+  namespace: pattern-namespace
+  labels:
+    app: details
+    service: details
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: details
+---
+# Source: bookinfo/charts/productpage/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: productpage
+  namespace: pattern-namespace
+  labels:
+    app: productpage
+    service: productpage
+  annotations:
+    konghq.com/plugins: keycloak-auth-plugin
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: productpage
+  type: LoadBalancer
+---
+# Source: bookinfo/charts/ratings/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratings
+  namespace: pattern-namespace
+  labels:
+    app: ratings
+    service: ratings
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: ratings
+---
+# Source: bookinfo/charts/reviews/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews
+  namespace: pattern-namespace
+  labels:
+    app: reviews
+    service: reviews
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: reviews
+---
+# Source: bookinfo/charts/details/templates/deployment-v1.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: details-v1
+  namespace: pattern-namespace
+  labels:
+    helm.sh/chart: details-0.1.0
+    app: details
+    version: v1
+    app.kubernetes.io/version: "1.16.4"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: details
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: details
+        version: v1
+    spec:
+      serviceAccountName: bookinfo-details
+      containers:
+        - name: details
+          image: "docker.io/istio/examples-bookinfo-details-v1:1.16.4"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9080
+          securityContext:
+            runAsUser: 1000
+---
+# Source: bookinfo/charts/productpage/templates/deployment-v1.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productpage-v1
+  namespace: pattern-namespace
+  labels:
+    helm.sh/chart: productpage-0.1.0
+    app: productpage
+    version: v1
+    app.kubernetes.io/version: "1.16.4"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: productpage
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: productpage
+        version: v1
+    spec:
+      serviceAccountName: bookinfo-productpage
+      containers:
+        - name: productpage
+          image: "docker.io/istio/examples-bookinfo-productpage-v1:1.16.4"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            runAsUser: 1000
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+# Source: bookinfo/charts/ratings/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings-v1
+  namespace: pattern-namespace
+  labels:
+    helm.sh/chart: ratings-0.1.0
+    app: ratings
+    version: v1
+    app.kubernetes.io/version: "1.16.4"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ratings
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: ratings
+        version: v1
+    spec:
+      serviceAccountName: bookinfo-ratings
+      containers:
+        - name: ratings
+          image: "docker.io/istio/examples-bookinfo-ratings-v1:1.16.4"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9080
+          securityContext:
+            runAsUser: 1000
+---
+# Source: bookinfo/charts/reviews/templates/deployment-v1.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-v1
+  namespace: pattern-namespace
+  labels:
+    helm.sh/chart: reviews-0.1.0
+    app: reviews
+    app.kubernetes.io/version: "1.16.4"
+    app.kubernetes.io/managed-by: Helm
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v1
+    spec:
+      serviceAccountName: bookinfo-reviews
+      containers:
+        - name: reviews
+          image: "docker.io/istio/examples-bookinfo-reviews-v1:1.16.4"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LOG_DIR
+              value: "/tmp/logs"
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: wlp-output
+              mountPath: /opt/ibm/wlp/output
+          securityContext:
+            runAsUser: 1000
+      volumes:
+        - name: wlp-output
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+# Source: bookinfo/charts/reviews/templates/deployment-v2.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-v2
+  namespace: pattern-namespace
+  labels:
+    helm.sh/chart: reviews-0.1.0
+    app: reviews
+    app.kubernetes.io/version: "1.16.4"
+    app.kubernetes.io/managed-by: Helm
+    version: v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v2
+    spec:
+      serviceAccountName: bookinfo-reviews
+      containers:
+        - name: reviews
+          image: "docker.io/istio/examples-bookinfo-reviews-v2:1.16.4"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LOG_DIR
+              value: "/tmp/logs"
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: wlp-output
+              mountPath: /opt/ibm/wlp/output
+          securityContext:
+            runAsUser: 1000
+      volumes:
+        - name: wlp-output
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+# Source: bookinfo/charts/reviews/templates/deployment-v3.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-v3
+  namespace: pattern-namespace
+  labels:
+    helm.sh/chart: reviews-0.1.0
+    app: reviews
+    app.kubernetes.io/version: "1.16.4"
+    app.kubernetes.io/managed-by: Helm
+    version: v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews
+      version: v3
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v3
+    spec:
+      serviceAccountName: bookinfo-reviews
+      containers:
+        - name: reviews
+          image: "docker.io/istio/examples-bookinfo-reviews-v3:1.16.4"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LOG_DIR
+              value: "/tmp/logs"
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: wlp-output
+              mountPath: /opt/ibm/wlp/output
+          securityContext:
+            runAsUser: 1000
+      volumes:
+        - name: wlp-output
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

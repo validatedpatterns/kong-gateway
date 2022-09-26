@@ -65,4 +65,6 @@ jobs:
           curl -L -O https://github.com/yannh/kubeconform/releases/download/v0.4.13/kubeconform-linux-amd64.tar.gz
           tar xf kubeconform-linux-amd64.tar.gz
           sudo mv -v kubeconform /usr/local/bin
+          # Skipping deployments due to external Kong Chart
+          # Deployment release-name-kong is invalid: For field spec.template.spec.containers.0: Additional property terminationGracePeriodSeconds is not allowed
           make kubeconform
