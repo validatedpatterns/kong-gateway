@@ -15,16 +15,16 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "3"
 data:
-  patch-job.sh: |
+  post-deploy.sh: |
     #!/bin/bash
     set -eu
-    # Login Argo
     argocd login --username admin \
       $(oc get routes -n unmanaged- -gitops-server -otemplate='{{ .spec.host }}') \
       --password $(oc get secret -n unmanaged- -gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
       --insecure \
       --grpc-web
-    argocd app patch-resource --namespace kong kong-cp \
+    argocd app patch-resource kong-cp \
+      --namespace kong \
       --kind Deployment \
       --resource-name kong-cp-kong \
       --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_ADMIN_API_URI\", \"value\": \"$(oc get route -n kong  kong-cp-kong-admin -ojsonpath='{.spec.host}')\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
@@ -54,9 +54,16 @@ data:
       echo "dataplane project cannot be retrieved"
       exit 1
     fi
+
     # for establishing kong clusters
-    argocd app patch-resource --namespace kong kong-dp --kind Deployment --resource-name kong-dp-kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_CONTROL_PLANE\", \"value\": \"$(oc get cm cluster-urls -n kong -o jsonpath='{.data.CLUSTER_URL}'):8005\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
-    argocd app patch-resource --namespace kong kong-dp --kind Deployment --resource-name kong-dp-kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_TELEMETRY_ENDPOINT\", \"value\": \"$(oc get cm cluster-urls -n kong -o jsonpath='{.data.CLUSTER_TELEMETRY_URL}'):8006\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
+    CP_CLUSTER_URL=$(oc get cm cluster-urls -n kong -o jsonpath='{.data.CLUSTER_URL}')
+    argocd app patch-resource kong-dp \
+      --namespace kong \
+      --kind Deployment \
+      --resource-name kong-dp-kong \
+      --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_CONTROL_PLANE\", \"value\": \"$CP_CLUSTER_URL:8005\" }, { \"name\" : \"KONG_CLUSTER_TELEMETRY_ENDPOINT\", \"value\": \"$CP_CLUSTER_URL:8006\" }]}]}}}}"  \
+      --patch-type 'application/strategic-merge-patch+json'
+
     # patch rool url and redirect url for keycloak client
     # DP_DOMAIN=$(argocd cluster get dp -o server)
     # DP_DOMAIN=${DP_DOMAIN/https:\/\/api/apps}
@@ -154,20 +161,20 @@ spec:
       restartPolicy: OnFailure
       serviceAccountName: kong-clustering-gitops
       volumes:
-      - name: patch-job
+      - name: post-deploy
         configMap:
           name: kong-clustering-cp-post-deploy
           defaultMode: 0711 
       containers:
       - image: cmwylie19/kube-argo-base
-        name: patch-deploy
+        name: post-deploy
         resources: {}
         volumeMounts:
-        - name: patch-job
+        - name: post-deploy
           mountPath: /opt/scripts
         securityContext:
            runAsUser: 0
-        command: ["sh","-c","/opt/scripts/patch-job.sh"]
+        command: ["sh","-c","/opt/scripts/post-deploy.sh"]
 ---
 # Source: kong-clustering/templates/post-deploy-dp.yaml
 apiVersion: batch/v1
@@ -177,9 +184,7 @@ metadata:
   name: kong-clustering-dp-post-deploy
   generateName: path-kong-clustering
   annotations:
-    argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/sync-wave: "6"
-    # argocd.argoproj.io/hook-delete-policy: HookSucceeded # commenting out for debugging
 spec:
   backoffLimit: 20
   template:
@@ -192,7 +197,7 @@ spec:
           name: kong-clustering-dp-post-deploy 
           defaultMode: 0711 
       containers:
-      - image: quay.io/mpaulgreen/argo-helper:1.0
+      - image: cmwylie19/kube-argo-base
         name: post-deploy
         resources: {}
         volumeMounts:

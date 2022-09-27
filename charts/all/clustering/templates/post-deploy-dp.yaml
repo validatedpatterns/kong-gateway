@@ -5,9 +5,7 @@ metadata:
   name: {{ .Values.global.name }}-dp-post-deploy
   generateName: path-kong-clustering
   annotations:
-    argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/sync-wave: "6"
-    # argocd.argoproj.io/hook-delete-policy: HookSucceeded # commenting out for debugging
 spec:
   backoffLimit: 20
   template:
@@ -20,7 +18,7 @@ spec:
           name: {{ .Values.global.name }}-dp-post-deploy 
           defaultMode: 0711 
       containers:
-      - image: quay.io/mpaulgreen/argo-helper:1.0
+      - image: cmwylie19/kube-argo-base
         name: post-deploy
         resources: {}
         volumeMounts:
@@ -54,9 +52,16 @@ data:
       echo "dataplane project cannot be retrieved"
       exit 1
     fi
+
     # for establishing kong clusters
-    argocd app patch-resource --namespace {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} {{ index .Values.clusterGroup.applications "kong-dp" "name" }} --kind Deployment --resource-name {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_CONTROL_PLANE\", \"value\": \"$(oc get cm cluster-urls -n {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} -o jsonpath='{.data.CLUSTER_URL}'):8005\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
-    argocd app patch-resource --namespace {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} {{ index .Values.clusterGroup.applications "kong-dp" "name" }} --kind Deployment --resource-name {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_TELEMETRY_ENDPOINT\", \"value\": \"$(oc get cm cluster-urls -n {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} -o jsonpath='{.data.CLUSTER_TELEMETRY_URL}'):8006\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'
+    CP_CLUSTER_URL=$(oc get cm cluster-urls -n {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} -o jsonpath='{.data.CLUSTER_URL}')
+    argocd app patch-resource {{ index .Values.clusterGroup.applications "kong-dp" "name" }} \
+      --namespace {{ index .Values.clusterGroup.applications "kong-dp" "namespace" }} \
+      --kind Deployment \
+      --resource-name {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong \
+      --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_CONTROL_PLANE\", \"value\": \"$CP_CLUSTER_URL:8005\" }, { \"name\" : \"KONG_CLUSTER_TELEMETRY_ENDPOINT\", \"value\": \"$CP_CLUSTER_URL:8006\" }]}]}}}}"  \
+      --patch-type 'application/strategic-merge-patch+json'
+
     # patch rool url and redirect url for keycloak client
     # DP_DOMAIN=$(argocd cluster get dp -o server)
     # DP_DOMAIN=${DP_DOMAIN/https:\/\/api/apps}

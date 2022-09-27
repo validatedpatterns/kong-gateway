@@ -105,7 +105,7 @@ clusterGroup:
       ignoreDifferences:
         - group: "apps"
           kind: "Deployment"
-          jsonPointers:
+          jqPathExpressions:
           - .spec.template.spec.containers[] | select(.name == "proxy").env[] | select(.name == "KONG_CLUSTER_CONTROL_PLANE" or .name == "KONG_CLUSTER_TELEMETRY_ENDPOINT")
         - group: keycloak.org
           kind: "KeycloakClient"
