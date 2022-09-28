@@ -87,7 +87,7 @@ data:
         cronJobName: imperative-cronjob
         image: registry.redhat.io/ansible-automation-platform-22/ee-supported-rhel8:latest
         imagePullPolicy: Always
-        insecureUnsealVaultInsideClusterSchedule: '*/9 * * * *'
+        insecureUnsealVaultInsideClusterSchedule: '*/5 * * * *'
         jobName: imperative-job
         jobs:
         - name: test
@@ -134,6 +134,8 @@ data:
         pipelines:
           csv: redhat-openshift-pipelines.v1.5.2
           name: openshift-pipelines-operator-rh
+    files:
+      cluster_example_ca: /path/to/ca.file
     global:
       git:
         account: hybrid-cloud-patterns
@@ -161,15 +163,7 @@ data:
       aws:
         s3Secret: test-secret
       cluster_example:
-        config: |-
-          {
-            \"bearerToken\": \"<bearer_token>\",
-            \"tlsClientConfig\": {
-              \"insecure\": false,
-              \"caData\": \"<base64 encoded CA>\"
-            }
-          }
-        name: example
+        bearerToken: <bearer_token>
         server: https://api.example.openshiftapps.com:6443
       git:
         token: test-git-token
@@ -363,7 +357,7 @@ metadata:
   name: unsealvault-cronjob
   namespace: imperative
 spec:
-  schedule: "*/9 * * * *"
+  schedule: "*/5 * * * *"
   # if previous Job is still running, skip execution of a new Job
   concurrencyPolicy: Forbid
   jobTemplate:
@@ -718,6 +712,9 @@ kind: ExternalSecret
 metadata:
   name: example-secret
   namespace: mypattern-example
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "100"
 spec:
   refreshInterval: 15s
   secretStoreRef:
@@ -730,9 +727,31 @@ spec:
       metadata:
         labels:
           argocd.argoproj.io/secret-type: cluster
-  dataFrom:
-  - extract:
+      data:
+        name: example
+        server: |-
+          {{ .kubeServer | toString }}
+        config: |
+          {
+            "bearerToken": {{ .kubeBearer | toString | quote }},
+            "tlsClientConfig": {
+              "insecure": false,
+              "caData": {{ .kubeCA | toString | quote }}
+            }
+          }
+  data:
+  - secretKey: kubeServer
+    remoteRef:
       key: secret/data/hub/cluster_example
+      property: server
+  - secretKey: kubeBearer
+    remoteRef:
+      key: secret/data/hub/cluster_example
+      property: bearerToken
+  - secretKey: kubeCA
+    remoteRef:
+      key: secret/data/hub/cluster_example_ca
+      property: b64content
 ---
 # Source: pattern-clustergroup/templates/operatorgroup.yaml
 apiVersion: operators.coreos.com/v1
@@ -766,6 +785,7 @@ spec:
   sourceNamespace: openshift-marketplace
   channel: release-2.4
   installPlanApproval: Automatic
+  startingCSV: advanced-cluster-management.v2.4.1
 ---
 # Source: pattern-clustergroup/templates/subscriptions.yaml
 apiVersion: operators.coreos.com/v1alpha1
@@ -779,3 +799,4 @@ spec:
   sourceNamespace: openshift-marketplace
   channel: stable
   installPlanApproval: Automatic
+  startingCSV: redhat-openshift-pipelines.v1.5.2

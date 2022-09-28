@@ -1,0 +1,13 @@
+---
+global:
+  pattern: unmanaged
+  namespace: test
+  name: kong-clustering
+clusterGroup:
+  applications:
+    kong-cp:
+      name: kong-cp
+      namespace: kong
+    kong-dp:
+      name: kong-dp
+      namespace: kong

@@ -1,0 +1,9 @@
+dependencies:
+- name: postgresql
+  repository: ""
+  version: 0.0.1
+- name: kong
+  repository: https://charts.konghq.com
+  version: 2.13.0
+digest: sha256:9744c89fbb9816830a32aab41ed5fe4b5d396cb16d82e8e07c6100dc86e7aea7
+generated: "2022-09-23T12:14:00.402340363+02:00"

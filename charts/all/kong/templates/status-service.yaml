@@ -1,0 +1,25 @@
+{{ if eq .Values.kong.env.role "data_plane"}}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: {{ .Values.global.name }}
+    app.kubernetes.io/name: {{ .Values.global.name }}
+    app.kubernetes.io/version: "2.8"
+    kong-metrics: "kong-admin"
+  name: {{ .Values.global.name }}-kong-status
+  namespace: {{ .Values.global.namespace }}
+spec:
+  ports:
+  - appProtocol: http
+    name: kong-status
+    port: 8100
+    protocol: TCP
+    targetPort: 8100
+  selector:
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}
+    app.kubernetes.io/name: {{ .Values.global.name }}
+  sessionAffinity: None
+  type: ClusterIP
+{{ end }}

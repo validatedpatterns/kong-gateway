@@ -1,11 +1,11 @@
 ---
 global:
-  pattern: multicloud-gitops
-
+  name: kong
+  pattern: kong-gateway
   options:
     useCSV: false
     syncPolicy: Automatic
     installPlanApproval: Automatic
 
 main:
-  clusterGroupName: hub
+  clusterGroupName: unmanaged

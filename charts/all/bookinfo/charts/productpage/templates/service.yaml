@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "productpage.name" . }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: productpage
+    service: productpage
+  annotations:
+    konghq.com/plugins: keycloak-auth-plugin
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: productpage
+  type: LoadBalancer

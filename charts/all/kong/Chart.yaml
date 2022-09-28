@@ -1,0 +1,14 @@
+apiVersion: v2
+description: A Helm chart to build and deploy a use of Kong Gateway.
+keywords:
+- pattern
+name: kong
+version: 0.0.1
+dependencies:
+- name: postgresql
+  version: 0.0.1
+  tags:
+    - postgres
+- name: kong
+  version: 2.13.0
+  repository: https://charts.konghq.com

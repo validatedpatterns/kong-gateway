@@ -1,0 +1,80 @@
+{{ if eq .Values.kong.env.role "data_plane" }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong-proxy
+  namespace: {{ .Values.global.namespace }}
+spec:
+  port:
+    targetPort: kong-proxy
+  to:
+    kind: Service
+    name: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong-proxy
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong-proxy-tls
+  namespace: {{ .Values.global.namespace }}
+spec:
+  port:
+    targetPort: kong-proxy-tls
+  to:
+    kind: Service
+    name: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong-proxy
+  tls:
+    termination: passthrough
+{{ else if eq .Values.kong.env.role "control_plane" }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-admin
+  namespace: {{ .Values.global.namespace }}
+spec:
+  port:
+    targetPort: kong-admin
+  to:
+    kind: Service
+    name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-admin
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-manager
+  namespace: {{ .Values.global.namespace }}
+spec:
+  port:
+    targetPort: kong-manager
+  to:
+    kind: Service
+    name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-manager
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-manager-tls
+  namespace: {{ .Values.global.namespace }}
+spec:
+  port:
+    targetPort: kong-manager-tls
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-manager
+---    
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-admin-tls
+  namespace: {{ .Values.global.namespace }}
+spec:
+  port:
+    targetPort: kong-admin-tls
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-admin
+{{ end }}

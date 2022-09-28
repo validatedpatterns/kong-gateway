@@ -1,0 +1,47 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: {{ .Values.global.namespace }}
+  name: {{ .Values.global.name }}-cp-post-deploy
+spec:
+  backoffLimit: 20
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Values.global.name }}-gitops
+      volumes:
+      - name: post-deploy
+        configMap:
+          name: {{ .Values.global.name }}-cp-post-deploy
+          defaultMode: 0711 
+      containers:
+      - image: quay.io/ecosystem-appeng/argocd-helper:1.0
+        name: post-deploy
+        resources: {}
+        volumeMounts:
+        - name: post-deploy
+          mountPath: /opt/scripts
+        securityContext:
+           runAsUser: 0
+        command: ["sh","-c","/opt/scripts/post-deploy.sh"]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ .Values.global.namespace }}
+  name: {{ .Values.global.name }}-cp-post-deploy
+data:
+  post-deploy.sh: |
+    #!/bin/bash
+    set -eu
+    argocd login --username admin \
+      $(oc get routes -n {{ .Values.global.pattern }}-{{ .Values.clusterGroup.name}} {{ $.Values.clusterGroup.name }}-gitops-server -otemplate='{{`{{ .spec.host }}`}}') \
+      --password $(oc get secret -n {{ .Values.global.pattern }}-{{ .Values.clusterGroup.name}} {{ $.Values.clusterGroup.name }}-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
+      --insecure \
+      --grpc-web
+    argocd app patch-resource {{ index .Values.clusterGroup.applications "kong-cp" "name" }} \
+      --namespace {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} \
+      --kind Deployment \
+      --resource-name {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong \
+      --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_ADMIN_API_URI\", \"value\": \"$(oc get route -n {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }}  {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-admin -ojsonpath='{.spec.host}')\" }]}]}}}}"  --patch-type 'application/strategic-merge-patch+json'

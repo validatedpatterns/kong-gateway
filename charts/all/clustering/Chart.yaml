@@ -1,0 +1,6 @@
+apiVersion: v2
+description: A Helm chart to configure Kong Clustering
+keywords:
+- pattern
+name: kong-clustering
+version: 0.0.1
