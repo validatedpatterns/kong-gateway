@@ -4,8 +4,6 @@ kind: Job
 metadata:
   namespace: {{ .Values.global.namespace }}
   name: {{ .Values.global.name }}-cp-post-deploy
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   backoffLimit: 20
   template:
@@ -33,8 +31,6 @@ kind: ConfigMap
 metadata:
   namespace: {{ .Values.global.namespace }}
   name: {{ .Values.global.name }}-cp-post-deploy
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 data:
   post-deploy.sh: |
     #!/bin/bash

@@ -88,8 +88,6 @@ kind: ConfigMap
 metadata:
   name: cm-generator
   namespace: test
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 ---
 # Source: kong/charts/postgresql/templates/pvc.yaml
 apiVersion: v1
@@ -1382,8 +1380,6 @@ kind: Job
 metadata:
   name: cm-generator
   namespace: test
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   template:
     spec:
@@ -1502,8 +1498,6 @@ kind: Route
 metadata:
   name: kong-cp-kong-admin
   namespace: test
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-admin
@@ -1517,8 +1511,6 @@ kind: Route
 metadata:
   name: kong-cp-kong-manager
   namespace: test
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-manager
@@ -1532,8 +1524,6 @@ kind: Route
 metadata:
   name: kong-cp-kong-manager-tls
   namespace: test
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-manager-tls
@@ -1549,8 +1539,6 @@ kind: Route
 metadata:
   name: kong-cp-kong-admin-tls
   namespace: test
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-admin-tls

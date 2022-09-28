@@ -9,8 +9,6 @@ metadata:
     kong-metrics: "kong-admin"
   name: {{ .Values.global.name }}-kong-status
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "5"
 spec:
   ports:
   - appProtocol: http

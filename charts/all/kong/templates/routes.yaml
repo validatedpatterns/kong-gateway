@@ -4,8 +4,6 @@ kind: Route
 metadata:
   name: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong-proxy
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "5"
 spec:
   port:
     targetPort: kong-proxy
@@ -18,8 +16,6 @@ kind: Route
 metadata:
   name: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong-proxy-tls
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "5"
 spec:
   port:
     targetPort: kong-proxy-tls
@@ -35,8 +31,6 @@ kind: Route
 metadata:
   name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-admin
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-admin
@@ -49,8 +43,6 @@ kind: Route
 metadata:
   name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-manager
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-manager
@@ -63,8 +55,6 @@ kind: Route
 metadata:
   name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-manager-tls
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-manager-tls
@@ -79,8 +69,6 @@ kind: Route
 metadata:
   name: {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-admin-tls
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   port:
     targetPort: kong-admin-tls

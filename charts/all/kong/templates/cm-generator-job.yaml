@@ -4,8 +4,6 @@ kind: Job
 metadata:
   name: cm-generator
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   template:
     spec:
@@ -69,6 +67,4 @@ kind: ConfigMap
 metadata:
   name: cm-generator
   namespace: {{ .Values.global.namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 {{ end }}    

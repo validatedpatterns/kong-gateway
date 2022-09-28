@@ -12,8 +12,6 @@ kind: ConfigMap
 metadata:
   namespace: test
   name: kong-clustering-cp-post-deploy
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 data:
   post-deploy.sh: |
     #!/bin/bash
@@ -35,8 +33,6 @@ kind: ConfigMap
 metadata:
   namespace: test
   name: kong-clustering-dp-post-deploy
-  annotations:
-    argocd.argoproj.io/sync-wave: "6"
 data:
   post-deploy.sh: |
     #!/bin/bash
@@ -143,8 +139,6 @@ kind: Job
 metadata:
   namespace: test
   name: kong-clustering-cp-post-deploy
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
 spec:
   backoffLimit: 20
   template:
@@ -174,8 +168,6 @@ metadata:
   namespace: test
   name: kong-clustering-dp-post-deploy
   generateName: path-kong-clustering
-  annotations:
-    argocd.argoproj.io/sync-wave: "6"
 spec:
   backoffLimit: 20
   template:
