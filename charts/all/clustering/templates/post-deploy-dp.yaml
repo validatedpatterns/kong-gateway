@@ -18,7 +18,7 @@ spec:
           name: {{ .Values.global.name }}-dp-post-deploy 
           defaultMode: 0711 
       containers:
-      - image: cmwylie19/kube-argo-base
+      - image: quay.io/ecosystem-appeng/argocd-helper:1.0
         name: post-deploy
         resources: {}
         volumeMounts:
@@ -61,12 +61,3 @@ data:
       --resource-name {{ index .Values.clusterGroup.applications "kong-dp" "name" }}-kong \
       --patch "{\"spec\": { \"template\" : { \"spec\" : {\"containers\":[{\"name\":\"proxy\",\"env\": [{ \"name\" : \"KONG_CLUSTER_CONTROL_PLANE\", \"value\": \"$CP_CLUSTER_URL:8005\" }, { \"name\" : \"KONG_CLUSTER_TELEMETRY_ENDPOINT\", \"value\": \"$CP_CLUSTER_URL:8006\" }]}]}}}}"  \
       --patch-type 'application/strategic-merge-patch+json'
-
-    # patch rool url and redirect url for keycloak client
-    # DP_DOMAIN=$(argocd cluster get dp -o server)
-    # DP_DOMAIN=${DP_DOMAIN/https:\/\/api/apps}
-    # DP_DOMAIN=${DP_DOMAIN/:*/}
-    # if ! argocd app patch-resource dp-prereqs --kind KeycloakClient --resource-name kong-demo-client --namespace=keycloak --patch "{\"spec\":{\"client\":{\"rootUrl\": \"http://kong-dp-kong-proxy-kong.${DP_DOMAIN}/\",\"redirectUris\":[\"http://kong-kong-proxy-kong.${DP_DOMAIN}/*\"]}}}" --patch-type 'application/merge-patch+json'; then
-    #   echo "keycloak client not found"
-    #   exit 1
-    # fi

@@ -1,6 +1,13 @@
 ---
 global:
+  name: kong
   namespace: test
+clusterGroup:
+  applications:
+    kong-cp:
+      name: kong-cp
+      namespace: kong
+  
 tags:
   postgres: true
 postgresql:

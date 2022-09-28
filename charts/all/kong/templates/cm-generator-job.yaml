@@ -10,14 +10,14 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
-      serviceAccountName: kong
+      serviceAccountName: {{ .Values.kong.deployment.serviceAccount.name }}
       volumes:
       - name: cm-generator
         configMap:
           name: cm-generator
           defaultMode: 0711 
       containers:
-      - image: cmwylie19/kube-argo-base
+      - image: quay.io/ecosystem-appeng/argocd-helper:1.0
         name: cm-generator
         resources: {}
         volumeMounts:
@@ -34,30 +34,30 @@ data:
     set -eu
     # allow LB to establish IP
     sleep 30
-    CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+    CLUSTER_URL=$(oc get svc {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
     # while CLUSTER_URL is null
     while [ -z "$CLUSTER_URL"]
     do
         # gcp
-        CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+        CLUSTER_URL=$(oc get svc {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].ip}')
         if [ -z "$CLUSTER_URL" ];
         then 
             # aws
-            CLUSTER_URL=$(oc get svc kong-cp-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
+            CLUSTER_URL=$(oc get svc {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-cluster -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
         else 
             echo "CLUSTER_URL Not NULL";
         fi
     done
-    CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+    CLUSTER_TELEMETRY_URL=$(oc get svc {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
     # while CLUSTER_TELEMETRY_URL is null
     while [ -z "$CLUSTER_TELEMETRY_URL"]
     do
         # gcp
-        CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
+        CLUSTER_TELEMETRY_URL=$(oc get svc {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].ip}')
         if [ -z "$CLUSTER_TELEMETRY_URL" ];
         then 
             # aws
-            CLUSTER_TELEMETRY_URL=$(oc get svc kong-cp-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
+            CLUSTER_TELEMETRY_URL=$(oc get svc {{ index .Values.clusterGroup.applications "kong-cp" "name" }}-kong-clustertelemetry -ojsonpath='{.status.loadBalancer.ingress[].hostname}')
         else 
             echo "CLUSTER_TELEMETRY_URL Not NULL";
         fi

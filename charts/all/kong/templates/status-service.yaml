@@ -3,11 +3,11 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/instance: kong
-    app.kubernetes.io/name: kong
+    app.kubernetes.io/instance: {{ .Values.global.name }}
+    app.kubernetes.io/name: {{ .Values.global.name }}
     app.kubernetes.io/version: "2.8"
     kong-metrics: "kong-admin"
-  name: kong-kong-status
+  name: {{ .Values.global.name }}-kong-status
   namespace: {{ .Values.global.namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "5"
@@ -20,8 +20,8 @@ spec:
     targetPort: 8100
   selector:
     app.kubernetes.io/component: app
-    app.kubernetes.io/instance: kong-dp
-    app.kubernetes.io/name: kong
+    app.kubernetes.io/instance: {{ index .Values.clusterGroup.applications "kong-dp" "name" }}
+    app.kubernetes.io/name: {{ .Values.global.name }}
   sessionAffinity: None
   type: ClusterIP
 {{ end }}

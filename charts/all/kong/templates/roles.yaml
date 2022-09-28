@@ -1,40 +1,7 @@
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRole
-# metadata:
-#   name: gitops-kong
-# rules:
-#   - apiGroups:
-#       - networking.k8s.io
-#     resources:
-#       - ingressclasses
-#     verbs:
-#       - create
-#       - patch
-#   - apiGroups:
-#       - apiextensions.k8s.io
-#     resources:
-#       - customresourcedefinitions
-#     verbs:
-#       - patch
-#       - create
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRoleBinding
-# metadata:
-#   name: gitops-kong-binding
-# roleRef:
-#   apiGroup: rbac.authorization.k8s.io
-#   kind: ClusterRole
-#   name: gitops-kong
-# subjects:
-#   - kind: ServiceAccount
-#     name: redhat-kong-gitops-argocd-application-controller
-#     namespace: openshift-gitops
----
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kong-role
+  name: {{ .Values.global.name }}-role
   namespace: {{ .Values.global.namespace }}
 rules:
   - apiGroups:
@@ -64,13 +31,13 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kong-role-binding
+  name: {{ .Values.global.name }}-role-binding
   namespace: {{ .Values.global.namespace }}
 subjects:
   - kind: ServiceAccount
-    name: kong
+    name: {{ .Values.kong.deployment.serviceAccount.name }}
     namespace: {{ .Values.global.namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kong-role
+  name: {{ .Values.global.name }}-role

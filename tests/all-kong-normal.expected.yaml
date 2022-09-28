@@ -1367,13 +1367,13 @@ spec:
       serviceAccountName: kong
       containers:
       - name: generate-cert-secret
-        image: quay.io/mpaulgreen/cert-generator:1.0
+        image: quay.io/ecosystem-appeng/cert-generator:1.0
         securityContext:
           runAsUser: 0
         command:
          - "/bin/bash"
          - "-c"
-         - "oc create secret tls kong-cluster-cert --cert=./cluster.crt --key=./cluster.key -n kong && echo 'kong certificate secret created'"
+         - "oc create secret tls kong-cluster-cert --cert=./cluster.crt --key=./cluster.key -n pattern-namespace && echo 'kong certificate secret created'"
       restartPolicy: Never
 ---
 # Source: kong/templates/cm-generator-job.yaml
@@ -1395,7 +1395,7 @@ spec:
           name: cm-generator
           defaultMode: 0711 
       containers:
-      - image: cmwylie19/kube-argo-base
+      - image: quay.io/ecosystem-appeng/argocd-helper:1.0
         name: cm-generator
         resources: {}
         volumeMounts:
@@ -1404,40 +1404,6 @@ spec:
         securityContext:
            runAsUser: 0
         command: ["sh","-c","/opt/scripts/cm-creator.sh"]
----
-# Source: kong/templates/roles.yaml
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRole
-# metadata:
-#   name: gitops-kong
-# rules:
-#   - apiGroups:
-#       - networking.k8s.io
-#     resources:
-#       - ingressclasses
-#     verbs:
-#       - create
-#       - patch
-#   - apiGroups:
-#       - apiextensions.k8s.io
-#     resources:
-#       - customresourcedefinitions
-#     verbs:
-#       - patch
-#       - create
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRoleBinding
-# metadata:
-#   name: gitops-kong-binding
-# roleRef:
-#   apiGroup: rbac.authorization.k8s.io
-#   kind: ClusterRole
-#   name: gitops-kong
-# subjects:
-#   - kind: ServiceAccount
-#     name: redhat-kong-gitops-argocd-application-controller
-#     namespace: openshift-gitops
 ---
 # Source: kong/charts/postgresql/templates/deployment-config.yaml
 apiVersion: apps.openshift.io/v1
