@@ -1,0 +1,164 @@
+--- tests/all-clustering-naked.expected.yml
++++ tests/all-clustering-normal.expected.yml
+@@ -3,22 +3,22 @@
+ apiVersion: v1
+ kind: ServiceAccount
+ metadata:
+-  name: kong-clustering-gitops
+-  namespace: test
++  name: kong-gitops
++  namespace: pattern-namespace
+ ---
+ # Source: kong-clustering/templates/post-deploy-cp.yaml
+ apiVersion: v1
+ kind: ConfigMap
+ metadata:
+-  namespace: test
+-  name: kong-clustering-cp-post-deploy
++  namespace: pattern-namespace
++  name: kong-cp-post-deploy
+ data:
+   post-deploy.sh: |
+     #!/bin/bash
+     set -eu
+     argocd login --username admin \
+-      $(oc get routes -n unmanaged- -gitops-server -otemplate='{{ .spec.host }}') \
+-      --password $(oc get secret -n unmanaged- -gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
++      $(oc get routes -n mypattern-unmanaged unmanaged-gitops-server -otemplate='{{ .spec.host }}') \
++      --password $(oc get secret -n mypattern-unmanaged unmanaged-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
+       --insecure \
+       --grpc-web
+     argocd app patch-resource kong-cp \
+@@ -31,22 +31,22 @@
+ apiVersion: v1
+ kind: ConfigMap
+ metadata:
+-  namespace: test
+-  name: kong-clustering-dp-post-deploy
++  namespace: pattern-namespace
++  name: kong-dp-post-deploy
+ data:
+   post-deploy.sh: |
+     #!/bin/bash
+     set -eu
+     argocd login --username admin \
+-      $(oc get routes -n unmanaged- -gitops-server -otemplate='{{ .spec.host }}') \
+-      --password $(oc get secret -n unmanaged- -gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
++      $(oc get routes -n mypattern-unmanaged unmanaged-gitops-server -otemplate='{{ .spec.host }}') \
++      --password $(oc get secret -n mypattern-unmanaged unmanaged-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
+       --insecure \
+       --grpc-web
+     if ! oc get cm -n kong cluster-urls; then
+       echo "config map cluster-urls not found"
+       exit 1
+     fi
+-    if ! oc get appprojects -n unmanaged- dataplane; then
++    if ! oc get appprojects -n mypattern-unmanaged dataplane; then
+       echo "dataplane project cannot be retrieved"
+       exit 1
+     fi
+@@ -64,7 +64,7 @@
+ kind: ClusterRole
+ apiVersion: rbac.authorization.k8s.io/v1
+ metadata:
+-  name: kong-clustering-jobs
++  name: kong-jobs
+ rules:
+   - verbs:
+       - get
+@@ -92,22 +92,22 @@
+ kind: ClusterRoleBinding
+ apiVersion: rbac.authorization.k8s.io/v1
+ metadata:
+-  name: kong-clustering-jobs-cluster-binding
++  name: kong-jobs-cluster-binding
+ subjects:
+   - kind: ServiceAccount
+-    namespace: test
+-    name: kong-clustering-gitops
++    namespace: pattern-namespace
++    name: kong-gitops
+ roleRef:
+   apiGroup: rbac.authorization.k8s.io
+   kind: ClusterRole
+-  name: kong-clustering-jobs
++  name: kong-jobs
+ ---
+ # Source: kong-clustering/templates/post-deploy-roles.yaml
+ kind: Role
+ apiVersion: rbac.authorization.k8s.io/v1
+ metadata:
+-  name: kong-clustering-role
+-  namespace: test
++  name: kong-role
++  namespace: pattern-namespace
+ rules:
+   - apiGroups:
+       - security.openshift.io
+@@ -122,33 +122,33 @@
+ kind: RoleBinding
+ apiVersion: rbac.authorization.k8s.io/v1
+ metadata:
+-  name: kong-clustering-jobs-binding
+-  namespace: test
++  name: kong-jobs-binding
++  namespace: pattern-namespace
+ subjects:
+   - kind: ServiceAccount
+-    name: kong-clustering-gitops
+-    namespace: test
++    name: kong-gitops
++    namespace: pattern-namespace
+ roleRef:
+   apiGroup: rbac.authorization.k8s.io
+   kind: Role
+-  name: kong-clustering-role
++  name: kong-role
+ ---
+ # Source: kong-clustering/templates/post-deploy-cp.yaml
+ apiVersion: batch/v1
+ kind: Job
+ metadata:
+-  namespace: test
+-  name: kong-clustering-cp-post-deploy
++  namespace: pattern-namespace
++  name: kong-cp-post-deploy
+ spec:
+   backoffLimit: 20
+   template:
+     spec:
+       restartPolicy: OnFailure
+-      serviceAccountName: kong-clustering-gitops
++      serviceAccountName: kong-gitops
+       volumes:
+       - name: post-deploy
+         configMap:
+-          name: kong-clustering-cp-post-deploy
++          name: kong-cp-post-deploy
+           defaultMode: 0711 
+       containers:
+       - image: quay.io/ecosystem-appeng/argocd-helper:1.0
+@@ -165,19 +165,19 @@
+ apiVersion: batch/v1
+ kind: Job
+ metadata:
+-  namespace: test
+-  name: kong-clustering-dp-post-deploy
++  namespace: pattern-namespace
++  name: kong-dp-post-deploy
+   generateName: path-kong-clustering
+ spec:
+   backoffLimit: 20
+   template:
+     spec:
+       restartPolicy: OnFailure
+-      serviceAccountName: kong-clustering-gitops
++      serviceAccountName: kong-gitops
+       volumes:
+       - name: post-deploy
+         configMap:
+-          name: kong-clustering-dp-post-deploy 
++          name: kong-dp-post-deploy 
+           defaultMode: 0711 
+       containers:
+       - image: quay.io/ecosystem-appeng/argocd-helper:1.0

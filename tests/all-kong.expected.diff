@@ -1,0 +1,158 @@
+--- tests/all-kong-naked.expected.yml
++++ tests/all-kong-normal.expected.yml
+@@ -3,14 +3,14 @@
+ apiVersion: v1
+ kind: Namespace
+ metadata:
+-  name: test
++  name: pattern-namespace
+ ---
+ # Source: kong/templates/service-account.yaml
+ apiVersion: v1
+ kind: ServiceAccount
+ metadata:
+   name: kong
+-  namespace: test
++  namespace: pattern-namespace
+ ---
+ # Source: kong/charts/kong/templates/secret-sa-token.yaml
+ apiVersion: v1
+@@ -27,7 +27,7 @@
+ kind: Secret
+ metadata:
+   name: postgresql
+-  namespace: test
++  namespace: pattern-namespace
+ stringData:
+   database-name: kong
+   database-password: kong123
+@@ -38,7 +38,7 @@
+ kind: Secret
+ metadata:
+   name: kong-enterprise-license
+-  namespace: test
++  namespace: pattern-namespace
+   annotations:
+     avp.kubernetes.io/path: "secret/data/hub/kong"
+ type: Opaque
+@@ -87,14 +87,14 @@
+ kind: ConfigMap
+ metadata:
+   name: cm-generator
+-  namespace: test
++  namespace: pattern-namespace
+ ---
+ # Source: kong/charts/postgresql/templates/pvc.yaml
+ apiVersion: v1
+ kind: PersistentVolumeClaim
+ metadata:
+   name: postgresql
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   accessModes:
+   - ReadWriteOnce
+@@ -429,7 +429,7 @@
+ apiVersion: rbac.authorization.k8s.io/v1
+ metadata:
+   name: kong-role
+-  namespace: test
++  namespace: pattern-namespace
+ rules:
+   - apiGroups:
+       - security.openshift.io
+@@ -481,11 +481,11 @@
+ apiVersion: rbac.authorization.k8s.io/v1
+ metadata:
+   name: kong-role-binding
+-  namespace: test
++  namespace: pattern-namespace
+ subjects:
+   - kind: ServiceAccount
+     name: kong
+-    namespace: test
++    namespace: pattern-namespace
+ roleRef:
+   apiGroup: rbac.authorization.k8s.io
+   kind: Role
+@@ -697,7 +697,7 @@
+ kind: Service
+ metadata:
+   name: postgresql
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   ports:
+   - name: postgresql
+@@ -1357,7 +1357,7 @@
+ kind: Job
+ metadata:
+   name: cert-secret
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   backoffLimit: 1
+   template:
+@@ -1371,7 +1371,7 @@
+         command:
+          - "/bin/bash"
+          - "-c"
+-         - "oc create secret tls kong-cluster-cert --cert=./cluster.crt --key=./cluster.key -n test && echo 'kong certificate secret created'"
++         - "oc create secret tls kong-cluster-cert --cert=./cluster.crt --key=./cluster.key -n pattern-namespace && echo 'kong certificate secret created'"
+       restartPolicy: Never
+ ---
+ # Source: kong/templates/cm-generator-job.yaml
+@@ -1379,7 +1379,7 @@
+ kind: Job
+ metadata:
+   name: cm-generator
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   template:
+     spec:
+@@ -1406,7 +1406,7 @@
+ kind: DeploymentConfig
+ metadata:
+   name: postgresql
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   replicas: 1
+   selector:
+@@ -1497,7 +1497,7 @@
+ kind: Route
+ metadata:
+   name: kong-cp-kong-admin
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   port:
+     targetPort: kong-admin
+@@ -1510,7 +1510,7 @@
+ kind: Route
+ metadata:
+   name: kong-cp-kong-manager
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   port:
+     targetPort: kong-manager
+@@ -1523,7 +1523,7 @@
+ kind: Route
+ metadata:
+   name: kong-cp-kong-manager-tls
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   port:
+     targetPort: kong-manager-tls
+@@ -1538,7 +1538,7 @@
+ kind: Route
+ metadata:
+   name: kong-cp-kong-admin-tls
+-  namespace: test
++  namespace: pattern-namespace
+ spec:
+   port:
+     targetPort: kong-admin-tls
