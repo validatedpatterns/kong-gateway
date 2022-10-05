@@ -33,18 +33,6 @@ stringData:
   database-password: kong123
   database-user: kong
 ---
-# Source: kong/templates/license-secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kong-enterprise-license
-  namespace: pattern-namespace
-  annotations:
-    avp.kubernetes.io/path: "secret/data/hub/kong"
-type: Opaque
-stringData:
-  license: "<license>"
----
 # Source: kong/templates/cm-generator-job.yaml
 apiVersion: v1
 data:
@@ -1491,6 +1479,30 @@ spec:
       lastTriggeredImage: ""
     type: ImageChange
   - type: ConfigChange
+---
+# Source: kong/templates/license-secret.yaml
+apiVersion: "external-secrets.io/v1beta1"
+kind: ExternalSecret
+metadata:
+  name: license
+  namespace: kong
+spec:
+  refreshInterval: 15s
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: kong-enterprise-license
+    template:
+      type: Opaque
+      data:
+        license: |-
+          {{ .mysecret | toString }}
+  data:
+  - secretKey: mysecret
+    remoteRef:
+      key: secret/data/hub/kong
+      property: license
 ---
 # Source: kong/templates/routes.yaml
 apiVersion: route.openshift.io/v1

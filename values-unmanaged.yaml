@@ -112,6 +112,10 @@ clusterGroup:
           jsonPointers:
           - /spec/client/redirectUris
           - /spec/client/rootUrl
+        - group: ""
+          kind: "Secret"
+          jsonPointers:
+          - /data
 
     bookinfo:
       name: bookinfo

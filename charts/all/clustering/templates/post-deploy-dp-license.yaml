@@ -1,0 +1,71 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: {{ .Values.global.namespace }}
+  name: {{ .Values.global.name }}-post-deploy-dp-license
+  generateName: deploy-dp-license
+spec:
+  backoffLimit: 40
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Values.global.name }}-gitops
+      volumes:
+      - name: post-deploy-dp-license
+        configMap:
+          name: {{ .Values.global.name }}-post-deploy-dp-license
+          defaultMode: 0711 
+      containers:
+      - image: quay.io/ecosystem-appeng/argocd-helper:1.0
+        name: post-deploy-dp-license
+        resources: {}
+        volumeMounts:
+        - name: post-deploy-dp-license
+          mountPath: /opt/scripts
+        securityContext:
+           runAsUser: 0
+        command: ["sh","-c","/opt/scripts/post-deploy.sh"]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ .Values.global.namespace }}
+  name: {{ .Values.global.name }}-post-deploy-dp-license
+data:
+  post-deploy.sh: |
+    #!/bin/bash
+    set -eu
+    argocd login --username admin \
+      $(oc get routes -n {{ .Values.global.pattern }}-{{ .Values.clusterGroup.name}} {{ $.Values.clusterGroup.name }}-gitops-server -otemplate='{{`{{ .spec.host }}`}}') \
+      --password $(oc get secret -n {{ .Values.global.pattern }}-{{ .Values.clusterGroup.name}} {{ $.Values.clusterGroup.name }}-gitops-cluster -ojsonpath='{.data.admin\.password}' | base64 -d) \
+      --insecure \
+      --grpc-web
+    if ! oc get secret -n {{ index .Values.clusterGroup.applications "kong-dp" "namespace" }} {{ .Values.global.name }}-enterprise-license; then
+      echo "secret not found"
+      exit 1
+    fi
+
+    if ! oc get appprojects -n {{ .Values.global.pattern }}-{{ .Values.clusterGroup.name}} dataplane; then
+      echo "dataplane project cannot be retrieved"
+      exit 1
+    fi
+
+    if ! oc get appprojects -n {{ .Values.global.pattern }}-{{ .Values.clusterGroup.name}} controlplane; then
+      echo "controlplane project cannot be retrieved"
+      exit 1
+    fi
+
+    if ! oc get secret {{ .Values.global.name }}-enterprise-license -n {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} -o jsonpath='{.data.license}'; then
+      echo "kong-enterprise license not found"
+      exit 1
+    fi
+
+    # for patching enterprise license in data plane
+    SECRET=$(oc get secret {{ .Values.global.name }}-enterprise-license -n {{ index .Values.clusterGroup.applications "kong-cp" "namespace" }} -o jsonpath='{.data.license}')
+
+    argocd app patch-resource {{ index .Values.clusterGroup.applications "kong-dp" "name" }} \
+    --kind Secret --resource-name {{ .Values.global.name }}-enterprise-license \
+    --namespace={{ index .Values.clusterGroup.applications "kong-dp" "namespace" }} \
+    --patch "{\"data\": {\"license\":\"$SECRET\"} }" \
+    --patch-type 'application/strategic-merge-patch+json'

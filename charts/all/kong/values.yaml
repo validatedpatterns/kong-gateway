@@ -7,6 +7,10 @@ clusterGroup:
     kong-cp:
       name: kong-cp
       namespace: kong
+    kong-dp:
+      name: kong-dp
+      namespace: kong
+      project: dataplane
   
 tags:
   postgres: true
@@ -74,3 +78,8 @@ kong:
   migrations:
     preUpgrade: false
     postUpgrade: true
+secretStore:
+  name: vault-backend
+  kind: ClusterSecretStore
+secretsBase:
+  key: secret/data/hub
