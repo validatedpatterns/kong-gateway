@@ -1,23 +1,13 @@
 {{- range .Values.clusterGroup.managedClusterGroups }}
 {{- $group := . }}
-{{- if .clusterPools }}{{- /* We only create ManagedClusterSets if there are clusterPools defined */}}
-apiVersion: cluster.open-cluster-management.io/v1beta1
-kind: ManagedClusterSet
-metadata:
-  annotations:
-    cluster.open-cluster-management.io/submariner-broker-ns: {{ .name }}-broker
-  name: {{ .name }}
-spec:
-  clusterSelector:
-    selectorType: LegacyClusterSetLabel
----
 {{- range .clusterPools }}
 
 {{- $pool := . }}
-{{- $poolName := cat .name $group.name | replace " " "-" }}
+{{- $poolName := print .name "-" $group.name }}
 
 {{- $cloud := "None" }}
 {{- $region := "None" }}
+{{- $numClusters := 0 }}
 
 {{- if .platform.aws }}
 {{- $cloud = "aws" }}
@@ -27,12 +17,17 @@ spec:
 {{- $region = .platform.azure.region }}
 {{- end }}
 
+{{- if .clusters }}
+{{- $numClusters = len .clusters }}
+{{- end }}
+
 apiVersion: hive.openshift.io/v1
 kind: ClusterPool
 metadata:
   name: "{{ $poolName }}"
   annotations:
     argocd.argoproj.io/sync-wave: "10"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
   labels:
     cloud: {{ $cloud }}
     region: '{{ $region }}'
@@ -42,18 +37,16 @@ spec:
   {{- if .size }}
   size: {{ .size }}
   {{- else }}
-  size: {{ len .clusters }}
+  size: {{ $numClusters }}
   {{- end }}
-  runningCount: {{ len .clusters }}
+  runningCount: {{ $numClusters }}
   baseDomain: {{ .baseDomain }}
   installConfigSecretTemplateRef:
-    name: {{ $poolName }}-install-config 
+    name: {{ $poolName }}-install-config
   imageSetRef:
-    name: img{{ .openshiftVersion }}-x86-64-appsub
+    name: img{{ .openshiftVersion }}-multi-appsub
   pullSecretRef:
     name: {{ $poolName }}-pull-secret
-  sshPrivateKeySecretRef:
-    name: {{ $poolName }}-ssh-private-key
   skipMachinePools: true # Disable MachinePool as using custom install-config
   platform:
     {{ $cloud }}:
@@ -65,19 +58,25 @@ spec:
 apiVersion: hive.openshift.io/v1
 kind: ClusterClaim
 metadata:
-  name: '{{ . }}-{{ $group.name }}'
+  name: '{{ lower . }}-{{ lower $group.name }}'
   annotations:
     argocd.argoproj.io/sync-wave: "20"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     cluster.open-cluster-management.io/createmanagedcluster: "true"
   labels:
-    clusterClaimName: {{ . }}-{{ $group.name }}
-    {{- range $group.labels }}
+    clusterClaimName: {{ lower . }}-{{ lower $group.name }}
+  {{- if (not $group.acmlabels) }}
+    clusterGroup: {{ $group.name }}
+  {{- else if eq (len $group.acmlabels) 0 }}
+    clusterGroup: {{ $group.name }}
+  {{- else }}
+    {{- range $group.acmlabels }}
     {{ .name }}: {{ .value }}
     {{- end }}
+  {{- end }}
 spec:
-  clusterPoolName: {{ $pool.name }}
+  clusterPoolName: {{ $poolName }}
 ---
 {{- end }}{{- /* range .range clusters */}}
 {{- end }}{{- /* range .clusterPools */}}
-{{- end }}{{- /* if .clusterPools) */}}
 {{- end }}{{- /* range .Values.clusterGroup.managedClusterGroups */}}

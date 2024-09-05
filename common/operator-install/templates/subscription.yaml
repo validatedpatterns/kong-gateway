@@ -6,8 +6,11 @@ metadata:
   labels:
     operators.coreos.com/patterns-operator.openshift-operators: ""
 spec:
-  channel: fast
-  installPlanApproval: Automatic
+  channel: {{ .Values.main.patternsOperator.channel }}
+  installPlanApproval: {{ .Values.main.patternsOperator.installPlanApproval }}
   name: patterns-operator
-  source: community-operators
-  sourceNamespace: openshift-marketplace
+  source: {{ .Values.main.patternsOperator.source }}
+  sourceNamespace: {{ .Values.main.patternsOperator.sourceNamespace }}
+  {{- if .Values.main.patternsOperator.startingCSV }}
+  startingCSV: {{ .Values.main.patternsOperator.startingCSV }}
+  {{- end }}

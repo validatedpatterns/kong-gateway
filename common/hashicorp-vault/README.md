@@ -1,9 +1,26 @@
 # VP hashicorp-vault
 
-**IMPORTANT**: Due to the fact that 'null' values do not work in helm charts ([GH#9136](https://github.com/helm/helm/issues/9136)),
-we need to patch the chart to skip setting the host.
+## PRs
 
-Make sure to run "./update-helm-dependency.sh"
+Please send PRs [here](https://github.com/validatedpatterns/common)
+
+## Updating the chart
+
+1. Edit Chart.yaml with the new version
+2. In the hashicorp-vault folder, run: `helm dependency update .`
+3. Run `./update-helm-dependency.sh`
+4. Check that the images in ./values.yaml are the same version as [upstream](https://github.com/hashicorp/vault-helm/blob/main/values.openshift.yaml)
+5. Git add the new chart in `./charts/vault-<version>.tgz`
+
+## Patches
+
+### Issue 674
+
+In order to be able to use vault ssl we need to patch the helm chart to fix
+upstream issue 674.
+
+Make sure to run "./update-helm-dependency.sh" after you updated the subchart
+(by calling helm dependency update .)
 
 We can drop this local patch when any one the two conditions is true:
 

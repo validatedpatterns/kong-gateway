@@ -3,6 +3,7 @@ global:
     useCSV: True
     syncPolicy: Manual
     installPlanApproval: Automatic
+    applicationRetryLimit: 20
 
   git:
     hostname: github.com
@@ -10,6 +11,9 @@ global:
     account: hybrid-cloud-patterns
     email: someone@somewhere.com
     dev_revision: main
+
+  secretStore:
+    backend: vault
 
 main:
   clusterGroupName: example

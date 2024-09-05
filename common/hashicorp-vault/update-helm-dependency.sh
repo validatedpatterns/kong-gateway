@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -eu -o pipefail
 
 # Get the version of the dependency and then unquote it
 TMPVER=$(sed -e '1,/^version:/ d' "Chart.yaml" | grep "version:" | awk '{ print $2 }')
@@ -19,7 +19,10 @@ pushd "${CHARTDIR}"
 rm -rf "${NAME}"
 tar xfz "${TAR}"
 pushd "${NAME}"
-patch -p1 < ../../patch-server-route.diff
+for i in ../../local-patches/*.patch; do
+	filterdiff "${i}" -p1 -x 'test/*' | patch -p1
+done
+find . -type f -iname '*.orig' -exec rm -f "{}" \;
 popd
 tar cvfz "${TAR}" "${NAME}"
 rm -rf "${NAME}"
