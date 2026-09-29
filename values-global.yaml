@@ -6,6 +6,7 @@ global:
     useCSV: false
     syncPolicy: Automatic
     installPlanApproval: Automatic
+  singleArgoCD: true
 
 main:
   clusterGroupName: unmanaged
